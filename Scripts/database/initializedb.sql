@@ -9,4 +9,8 @@ CREATE table "Active Alerts Acute PurpleAir"
 CREATE table "Archived Alerts Acute PurpleAir"
 (alert_index bigint, sensor_idex int, start_time timestamp, duration_minutes integer, max_reading float);
 
+/* adding this to this file in the way I did it for record keeping purposes. would obviously be better to make it as a bigint to begin with.  */
+
+ALTER TABLE "Sign Up Information"
+  ALTER COLUMN phone_number TYPE bigint;
 
