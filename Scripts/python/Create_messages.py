@@ -30,10 +30,10 @@ def degrees_to_cardinal(degree):
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def new_alert_message(sensor_indices, readings, intersection_indices):
+def new_alert_messages(sensor_indices, readings, intersection_indices):
     '''
     Get a list of messages for new alerts
-    # all inputs should be ordered lists!
+    # all inputs should be lists!
     # Composes the messages and return as a list of messages
     '''
     ## Database Credentials
@@ -93,12 +93,12 @@ def new_alert_message(sensor_indices, readings, intersection_indices):
     
     for r in response:
     
-        degree, distance, ns_cross_street, ew_cross_street = r # Unpack the tuple
+        degree, distance, ns_cross_street, ew_cross_street, order = r # Unpack the tuple
         
         direction_string = degrees_to_cardinal(degree)
         
-        message = f'''SPIKE ALERT! Sensor {sensor_index} is reading at {reading} micrograms/meter^3.
-This sensor is about {distance} meters {direction_string} from the intersection of {ew_cross_street} and {ns_cross_street}.
+        message = f'''SPIKE ALERT! Sensor {sensor_indices[order]} is reading at {readings[order]} micrograms/meter^3.
+This sensor is about {round(distance)} meters {direction_string} from the intersection of {ew_cross_street} and {ns_cross_street}.
 You are receiving this text because you signed up for SpikeAlerts. 
 Please reply with STOP to be removed from this list.'''
 
@@ -109,5 +109,22 @@ Please reply with STOP to be removed from this list.'''
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# def 
+def end_alert_messages(sensor_indices, durations, max_readings):
+    '''
+    Get a list of messages to send when an alert is over
+    This function returns a list of messages.
+    All inputs must be iterables!
+    '''
     
+    messages = []
+    
+    for i in len(sensor_indices):
+    
+        message = f'''Spike alert for sensor {sensor_indices[i]} is over.
+This event lasted {durations[i]} minutes with a maximum value of {max_readings[i]} micrograms/meter^3.
+You are receiving this text because you signed up for SpikeAlerts. 
+Please reply with STOP to be removed from this list.'''
+
+        messages += [message]
+        
+    return messages
