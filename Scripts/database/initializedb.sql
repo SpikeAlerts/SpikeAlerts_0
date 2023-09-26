@@ -13,7 +13,7 @@
 
 CREATE table "Sign Up Information"
 	(user_index serial, first_name text, last_name text,
-	 intersection_index int, phone_number int, email text, 
+	 intersection_index int, phone_number bigint, email text, 
 	 opt_in_phone boolean, opt_in_email boolean, last_messaged timestamp, active_alerts bigint []);
 
 CREATE table "Active Alerts Acute PurpleAir"
@@ -22,10 +22,13 @@ CREATE table "Active Alerts Acute PurpleAir"
 CREATE table "Archived Alerts Acute PurpleAir"
 (alert_index bigint, sensor_idex int, start_time timestamp, duration_minutes integer, max_reading float);
 
-/* adding this to this file in the way I did it for record keeping purposes. would obviously be better to make it as a bigint to begin with.  */
+/* adding this to this file in the way I did it for record keeping purposes. would obviously be better to make it as a bigint to begin with. - Priya
 
-ALTER TABLE "Sign Up Information"
-  ALTER COLUMN phone_number TYPE bigint;
+- Rob Changed the Create Statement 9/2023, leaving for future reference
+-- 
+-- ALTER TABLE "Sign Up Information"
+--   ALTER COLUMN phone_number TYPE bigint;
+*/
 
 CREATE TABLE "Minneapolis Boundary"
 (
@@ -73,7 +76,7 @@ CREATE TABLE "Road Intersections" -- Create table to store road intersections in
     geometry geometry
 );
 
---CREATE TABLE "Nearby Intersections"
+--CREATE TABLE "Nearby Intersections" -- Not sure if we're going this route, yet. Could be a view?
 --(
 --    intersection_index integer, -- unique identifier
 --    nearby_sensors int [] -- nearby sensors as an array of integers
