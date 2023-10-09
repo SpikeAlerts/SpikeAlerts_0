@@ -97,7 +97,7 @@ def new_alert_messages(sensor_indices, readings, intersection_indices):
         
         direction_string = degrees_to_cardinal(degree)
         
-        message = f'''SPIKE ALERT! Sensor {sensor_indices[order]} is reading at {readings[order]} micrograms/meter^3.
+        message = f'''SPIKE ALERT! Sensor {sensor_indices[order-1]} is reading at {readings[order-1]} micrograms/meter^3.
 This sensor is about {round(distance)} meters {direction_string} from the intersection of {ew_cross_street} and {ns_cross_street}.
 You are receiving this text because you signed up for SpikeAlerts. 
 Please reply with STOP to be removed from this list.'''

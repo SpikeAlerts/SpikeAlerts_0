@@ -9,7 +9,6 @@ import datetime as dt # Working with dates/times
 # Analysis
 
 import numpy as np
-import geopandas as gpd
 import pandas as pd
 
 # Function to get Sensors Data

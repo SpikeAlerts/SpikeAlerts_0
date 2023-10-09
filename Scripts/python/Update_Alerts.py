@@ -18,6 +18,9 @@ import pandas as pd
 
 def sort_sensors_for_updates(spikes_df, pg_connection_dict):
     '''
+    This sorts the sensor indices into sets based on if they are new, ongoing, or ended
+    spikes_df comes from Get_spikes_df() in Get_Spikes_df.py
+    
     '''
     
     # Get active alerts from database
@@ -39,6 +42,11 @@ def sort_sensors_for_updates(spikes_df, pg_connection_dict):
 
     cols_for_active_alerts = ['alert_index', 'sensor_index', 'start_time', 'max_reading']
     active_alerts = pd.DataFrame(cur.fetchall(), columns = cols_for_active_alerts)
+    
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
     
     # Check for:
 
@@ -139,13 +147,13 @@ WHERE sensor_index = {};
 
 # 1) Add to archived alerts
 
-def add_to_archived_alerts(ended_spikes, pg_connection_dict):
+def add_to_archived_alerts(ended_spike_sensors, pg_connection_dict):
     '''
-    ended_spikes = spikes_df[spikes_df.sensor_index.isin(ended_spike_sensors)]
+    ended_spike_sensors is a set of sensor indices that have ended spikes Alerts
     '''
 
     # Get relevant sensor indices as list
-    sensor_indices = ended_spikes.sensor_index.tolist()
+    sensor_indices = list(ended_spike_sensors)
                            
     # Create Cursor for commands
     conn = psycopg2.connect(**pg_connection_dict)
@@ -157,13 +165,13 @@ def add_to_archived_alerts(ended_spikes, pg_connection_dict):
     cmd = sql.SQL('''
     WITH ended_alerts as
     (
-    	SELECT alert_index, sensor_index, start_time, CURRENT_TIMESTAMP - start_time as time_diff, max_reading 
-     	FROM "Active Alerts Acute PurpleAir"
-     	WHERE sensor_index IN (SELECT UNNEST({}))
+SELECT alert_index, sensor_index, start_time, CURRENT_TIMESTAMP - start_time as time_diff, max_reading 
+FROM "Active Alerts Acute PurpleAir"
+WHERE sensor_index IN (SELECT UNNEST({}))
     )
     INSERT INTO "Archived Alerts Acute PurpleAir" 
     SELECT alert_index, sensor_index, start_time, (((DATE_PART('day', time_diff) * 24) + 
-    	DATE_PART('hour', time_diff)) * 60 + DATE_PART('minute', time_diff)) as duration_minutes, max_reading
+    DATE_PART('hour', time_diff)) * 60 + DATE_PART('minute', time_diff)) as duration_minutes, max_reading
     FROM ended_alerts;
     ''').format(sql.Literal(sensor_indices))
     
@@ -181,17 +189,35 @@ def add_to_archived_alerts(ended_spikes, pg_connection_dict):
 
 # 2) Remove from active alerts
 
-def remove_active_alerts(ended_spikes, pg_connection_dict):
+def remove_active_alerts(ended_spike_sensors, pg_connection_dict):
     '''
-    ended_spikes = spikes_df[spikes_df.sensor_index.isin(ended_spike_sensors)]
+    This function removes the ended_spikes from the Active Alerts Table
+    It also retrieves their alert_index
+    
+    ended_spike_sensors is a set of sensor indices that have ended spikes Alerts
+    
+    ended_alert_indices is returned alert_indices (as a list) of the removed alerts for accessing Archive for end message 
+    
     '''
 
     # Get relevant sensor indices as list
-    sensor_indices = ended_spikes.sensor_index.tolist()
+    sensor_indices = list(ended_spike_sensors)
                            
     # Create Cursor for commands
     conn = psycopg2.connect(**pg_connection_dict)
     cur = conn.cursor()
+    
+    cmd = sql.SQL('''
+    SELECT alert_index
+    FROM "Active Alerts Acute PurpleAir"
+    WHERE sensor_index IN (SELECT UNNEST({}));
+    ''').format(sql.Literal(sensor_indices))
+    
+    cur.execute(cmd)
+    # Commit command
+    conn.commit()
+    
+    ended_alert_indices = list(cur.fetchall()[0])
     
     cmd = sql.SQL('''
     DELETE FROM "Active Alerts Acute PurpleAir"
@@ -207,7 +233,7 @@ def remove_active_alerts(ended_spikes, pg_connection_dict):
     # Close connection
     conn.close()   
     
-    
+    return ended_alert_indices
     
     
     
