@@ -97,10 +97,22 @@ def new_alert_messages(sensor_indices, readings, intersection_indices):
         
         direction_string = degrees_to_cardinal(degree)
         
-        message = f'''SPIKE ALERT! Sensor {sensor_indices[order-1]} is reading at {readings[order-1]} micrograms/meter^3.
-This sensor is about {round(distance)} meters {direction_string} from the intersection of {ew_cross_street} and {ns_cross_street}.
-You are receiving this text because you signed up for SpikeAlerts. 
-Please reply with STOP to be removed from this list.'''
+        # Long Version (2 segments)
+
+#         message = f'''SPIKE ALERT! 
+# PurpleAir Sensor {sensor_indices[order-1]} is reading {readings[order-1]} micrograms/meter^3.
+# This sensor is about {round(distance/1609,2)} miles {direction_string} from the intersection of {ew_cross_street} and {ns_cross_street}. 
+# Webmap - https://map.purpleair.com/?select={sensor_indices[order-1]}/44.9723/-93.2447
+
+# Please reply with STOP to be removed from SpikeAlerts.'''
+        
+        # Shorter version (1 segment)
+        
+        message = f'''SPIKE ALERT!
+Air quality is unhealthy in your area
+https://map.purpleair.com/?select={sensor_indices[order-1]}/44.9723/-93.2447
+
+Please reply STOP to end these alerts'''
 
         messages += [message]
         
@@ -120,10 +132,11 @@ def end_alert_messages(sensor_indices, durations, max_readings):
     
     for i in len(sensor_indices):
     
-        message = f'''Spike alert for sensor {sensor_indices[i]} is over.
-This event lasted {durations[i]} minutes with a maximum value of {max_readings[i]} micrograms/meter^3.
-You are receiving this text because you signed up for SpikeAlerts. 
-Please reply with STOP to be removed from this list.'''
+        message = f'''Alert for sensor {sensor_index} is over.
+Event Duration: {duration} minutes 
+Max value: {max_reading} micrograms/meter^3
+
+Please reply with STOP to be removed from SpikeAlerts.'''
 
         messages += [message]
         
