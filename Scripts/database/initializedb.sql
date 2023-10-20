@@ -12,32 +12,25 @@
 --CREATE EXTENSION postgis_topology;
 
 CREATE table "Sign Up Information"
-	(user_index serial, first_name text, last_name text,
-	 intersection_index int, phone_number bigint, email text, 
-	 opt_in_phone boolean, opt_in_email boolean, last_messaged timestamp DEFAULT CURRENT_TIMESTAMP, active_alerts bigint []);
+	(record_id serial, -- Unique Identifier from REDCap
+	last_messaged timestamp DEFAULT CURRENT_TIMESTAMP, -- Last time messaged
+	messages_sent int DEFAULT 1, -- Number of messages sent
+	active_alerts bigint [] DEFAULT array[]::bigint [], -- List of Active Alerts
+	geometry geometry);
 
 CREATE table "Active Alerts Acute PurpleAir"
-	(alert_index bigserial, sensor_index int, start_time timestamp, max_reading float);
+	(alert_index bigserial, -- Unique identifier for an air quality spike alert
+	 sensor_indices int [] DEFAULT array[]::int [], -- List of Sensor Unique Identifiers 
+	  start_time timestamp,
+	   max_reading float); -- Maximum value registered from all sensors
 
-CREATE table "Archived Alerts Acute PurpleAir"
-(alert_index bigint, sensor_index int, start_time timestamp, duration_minutes integer, max_reading float);
-
-/* adding this to this file in the way I did it for record keeping purposes. would obviously be better to make it as a bigint to begin with. - Priya
-
-- Rob Changed the Create Statement 9/2023, leaving for future reference
--- 
--- ALTER TABLE "Sign Up Information"
---   ALTER COLUMN phone_number TYPE bigint;
-*/
-
-CREATE TABLE "Minneapolis Boundary"
-(
-    "CTU_ID" int, -- Unique Identifier
-    "CTU_NAME" text, -- City/Township Name
-    "CTU_CODE" text, -- City/Township Code
-    geometry geometry -- Polygon
-);
-
+CREATE table "Archived Alerts Acute PurpleAir" -- Archive of the Above table
+    (alert_index bigint,
+    sensor_indices int [], -- List of Sensor Unique Identifiers 
+    start_time timestamp,
+    duration_minutes integer,
+    max_reading float);
+    
 CREATE TABLE "PurpleAir Stations" -- See PurpleAir API - https://api.purpleair.com/
 (
 	sensor_index int,
@@ -54,32 +47,37 @@ CREATE TABLE "PurpleAir Stations" -- See PurpleAir API - https://api.purpleair.c
 	geometry geometry
 );
 
-CREATE TABLE "MNDOT Current AADT Segments" -- Create table to store information on Current AADT segments - https://gisdata.mn.gov/dataset/trans-aadt-traffic-segments
-( 
-    "SEQUENCE_NUMBER" int, -- Unique identifier
-    "ROUTE_LABEL" text,
-    "STREET_NAME" text,
-    "DAILY_FACTOR" text,
-    "SEASONAL_FACTOR" text,
-    "AXLE_FACTOR" text,
-    "CURRENT_YEAR" int,
-    "CURRENT_VOLUME" int,
-    geometry geometry
+CREATE TABLE "Minneapolis Boundary"
+(
+    "CTU_ID" int, -- Unique Identifier
+    "CTU_NAME" text, -- City/Township Name
+    "CTU_CODE" text, -- City/Township Code
+    geometry geometry -- Polygon
 );
 
+
+-- Don't need AADT yet
+
+--CREATE TABLE "MNDOT Current AADT Segments" -- Create table to store information on Current AADT segments - https://gisdata.mn.gov/dataset/trans-aadt-traffic-segments
+--( 
+--    "SEQUENCE_NUMBER" int, -- Unique identifier
+--    "ROUTE_LABEL" text,
+--    "STREET_NAME" text,
+--    "DAILY_FACTOR" text,
+--    "SEASONAL_FACTOR" text,
+--    "AXLE_FACTOR" text,
+--    "CURRENT_YEAR" int,
+--    "CURRENT_VOLUME" int,
+--    geometry geometry
+--);
+
+
+-- For relating the location to users
 CREATE TABLE "Road Intersections" -- Create table to store road intersections in minneapolis
 (
     intersection_index serial, -- Unique identifier
     "NS_cross_street" text, 
     "EW_cross_street" text,
-	nearby_sensors int [], -- nearby sensors as an array of integers
+--	nearby_sensors int [], -- nearby sensors as an array of integers
     geometry geometry
 );
-
---CREATE TABLE "Nearby Intersections" -- Not sure if we're going this route, yet. Could be a view?
---(
---    intersection_index integer, -- unique identifier
---    nearby_sensors int [] -- nearby sensors as an array of integers
---    --nearby_facilities int [], -- nearby mpca permitted emitter
---    --nearby_segments int [], -- nearby mndot aadt segment    
---);
