@@ -11,9 +11,11 @@
 --CREATE EXTENSION postgis; -- Add spatial extensions
 --CREATE EXTENSION postgis_topology;
 
+SET timezone TO 'Europe/Berlin';
+
 CREATE table "Sign Up Information"
 	(record_id serial, -- Unique Identifier from REDCap
-	last_messaged timestamp DEFAULT CURRENT_TIMESTAMP, -- Last time messaged
+	last_messaged timestamp DEFAULT CURRENT_TIMESTAMP AT TIME ZONE 'America/Chicago', -- Last time messaged
 	messages_sent int DEFAULT 1, -- Number of messages sent
 	active_alerts bigint [] DEFAULT array[]::bigint [], -- List of Active Alerts
 	geometry geometry);
