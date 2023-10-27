@@ -6,14 +6,24 @@
     # Example python MAIN.py 35 7 10
     # Will run the program for 7 days, update every 10 minutes, and alert people of sensors reading over 35 micrograms per meter cubed
 
-### Import Libraries
+### Prep
 
-# File/OS/Internet Interface
+## Import Libraries
+
+# File Manipulation
 
 import os # For working with Operating System
 import sys # System arguments
-import requests # Accessing the Web
 from dotenv import load_dotenv # Loading .env info
+
+# Web
+
+import requests # Accessing the Web
+
+# Time
+
+import datetime as dt # Working with dates/times
+import pytz # Timezones
 import time # For Sleeping
 
 # Database 
@@ -21,25 +31,21 @@ import time # For Sleeping
 import psycopg2
 from psycopg2 import sql
 
-# Analysis
+# Data Manipulation
 
-import datetime as dt # Working with dates/times
-import pytz # Timezones
 import numpy as np
-import pandas as pd
 import geopandas as gpd
-
-### Prep
+import pandas as pd
 
 ## Load Functions
-# Please see Scripts/python/*
 
+# Please see Scripts/python/*
 exec(open('Get_spikes_df.py').read())
 exec(open('Create_messages.py').read())
 exec(open('twilio_functions.py').read())
 exec(open('Update_Alerts.py').read())
 
-## Definitions
+## Global Variables
 
 load_dotenv() # Load .env file
 
@@ -47,7 +53,8 @@ load_dotenv() # Load .env file
 
 purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN') # PurpleAir API Read Key
 
-redCap_token = os.getenv('REDCAP_TOKEN') # Survey Token
+redCap_token_signUp = os.getenv('REDCAP_TOKEN_SIGNUP') # Survey Token
+redCap_token_report = os.getenv('REDCAP_TOKEN_REPORT') # Report Token
 
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
@@ -67,16 +74,17 @@ pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], cr
 
 spike_threshold = int(sys.argv[1]) # Value which defines an AQ_Spike (Micgrograms per meter cubed)
 
-# When to stop the program?
-days_to_run = int(sys.argv[2]) # How many days will we run this?
 timestep = int(sys.argv[3]) # Sleep time in between updates (in Minutes)
-stoptime = dt.datetime.now() + dt.timedelta(days=days_to_run) # When to stop the program (datetime)
+
+# When to stop the program? (datetime)
+days_to_run = int(sys.argv[2]) # How many days will we run this?
+stoptime = dt.datetime.now() + dt.timedelta(days=days_to_run)
 
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
 
 
-### The Script
+### The Loop
 
 print(f'''Beginning program {sys.argv[0]}
 
@@ -93,16 +101,14 @@ while True:
     print(now)
 
     if stoptime < now: # Check if we've hit stoptime
-        print("Terminating Program")
         break
+        
+#    if new day:
+#        NOT DONE
 
-    # Get the sensor_ids from sensors in our database
+    #  Get the sensor_ids from sensors in our database
 
     sensor_ids = get_sensor_ids(pg_connection_dict) # In Get_Spikes_df.py
-
-    # Check our active alerts
-
-    active_alerts_df = get_active_alerts(pg_connection_dict) # In Update_Alerts.py
 
     # Query PurpleAir for Spikes
 
@@ -112,11 +118,16 @@ while True:
 
     new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict) # In Update_Alerts.py
 
+    # Initialize messages_df
+    
+    messages_df = pd.DataFrame(np.empty(0, dtype = [('record_id', int),
+                                                    ('message', str)])
+                                    )
     # NEW Spikes
     
     if len(new_spike_sensors) > 0:
 
-        new_spikes_df = spikes_df[spikes_df.sensor_index.isin(new_spike_sensors)]
+        new_spikes_df = spikes_df[spikes_df.sensor_index.isin(new_spike_sensors)] 
     
         for index, row in new_spikes_df.iterrows():
     
@@ -124,13 +135,18 @@ while True:
         
             add_to_active_alerts(row, pg_connection_dict,
                                  runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
-                                )
+                                ) # In Update_Alerts.py
 
-            # 2) Text users about this - NOT DONE
+            # 2) Query users ST_Dwithin 1 kilometer & subscribed = TRUE -NOT DONE
             
-        #print(
+                # If #2 is not empty:
+                
+                # a) If within waking hours: Text users
+        	# Query users from #2 if both active_alerts and cached_alerts are empty then Compose Messages & concat to messages_df w/ record_id
+            # - NOT DONE  - do in Send_Alerts.py & .ipynb     
     
-            # 3) Add to User's Active Alerts - NOT DONE
+                # b) Add to #2's Active Alerts
+            # - NOT DONE - do in Update_Alerts.py & .ipynb
 
     # ONGOING spikes
 
@@ -142,9 +158,10 @@ while True:
 
             # 1) Update the maximum reading
     
-            update_max_reading(spike, pg_connection_dict)
+            update_max_reading(spike, pg_connection_dict) # In Update_Alerts.py
             
-            # 2) Merge/Cluster alerts? - TO DO in the future
+            # 2) Merge/Cluster alerts? 
+            # NOT DONE - FAR FUTURE TO DO
 
     # ENDED spikes
 
@@ -152,15 +169,36 @@ while True:
 
         # 1) Add alert to archive
     
-        add_to_archived_alerts(not_spiked_sensors, pg_connection_dict)
+        add_to_archived_alerts(not_spiked_sensors, pg_connection_dict) # In Update_Alerts.py
 
         # 2) Remove from Active Alerts
         
-        ended_alert_indices = remove_active_alerts(not_spiked_sensors, pg_connection_dict)
+        ended_alert_indices = remove_active_alerts(not_spiked_sensors, pg_connection_dict) # # A list from Update_Alerts.py
 
-        # 3) Text people it's over - NOT DONE
+        # 3) Transfer these alerts from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts 
+        # NOT DONE - do in Update_Alerts.py & .ipynb
 
-    # SLEEP
+        # 4) Query for people to text (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
+        # NOT DONE - do in Send_Alerts.py & .ipynb
 
-    time.sleep(timestep*60 - 3) # Sleep between updates - it takes about 3 seconds to run through everything
+        # 5) If #4 has elements: for each element (user) in #4
+            
+            # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
+            # - NOT DONE - do in Send_Alerts.py & .ipynb
+    
+            # b) Compose message telling user it's over w/ unique report option & concat to messages_df w/ record_id
+            # - NOT DONE - do in Send_Alerts.py & .ipynb
 
+            # c) Clear the user's cached_alerts 
+            # - NOT DONE - do in Update_Alerts.py & .ipynb
+
+    # SLEEP between updates
+
+    when_to_awake = now + dt.timedelta(minutes=timestep) 
+
+    sleep_seconds = (when_to_awake - dt.datetime.now()).seconds # - it takes about 3 seconds to run through everything
+
+    time.sleep(sleep_seconds) # Sleep
+
+
+print("Terminating Program")

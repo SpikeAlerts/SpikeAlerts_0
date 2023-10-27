@@ -15,13 +15,15 @@ from psycopg2 import sql
 # Analysis
 
 import numpy as np
+import geopandas as gpd
 import pandas as pd
 
 ### Function to get the sensor_ids from our database
 
 def get_sensor_ids(pg_connection_dict):
     '''
-    This function gets the sensor_ids of all sensors in our database
+    This function gets the sensor_ids of all sensors in our database.
+    Returns a pandas Series
     '''
 
     # Connect
@@ -36,7 +38,7 @@ def get_sensor_ids(pg_connection_dict):
     cur.execute(cmd) # Execute
     conn.commit() # Committ command
 
-    # Unpack response into numpy array
+    # Unpack response into pandas series
 
     sensor_ids = pd.DataFrame(cur.fetchall(), columns = ['sensor_index']).sensor_index
 
@@ -67,7 +69,7 @@ def getSensorsData(query='', api_read_key=''):
 
 ### The Function to get spikes dataframe
 
-def Get_spikes_df(api, sensor_ids, spike_threshold):
+def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     ''' This function queries the PurpleAir API for sensors in the list of sensor_ids for readings over a spike threshold. 
     It will return a pandas dataframe with columns sensor_index (integer) and pm25 (float) as well as a runtime (datetime)
@@ -96,8 +98,8 @@ def Get_spikes_df(api, sensor_ids, spike_threshold):
     
     ### Call the api
     
-    runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # The time the query is sent
-    response = getSensorsData(query_string, api)
+    runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # When we call - datetime in our timezone
+    response = getSensorsData(query_string, purpleAir_api) # The response is a requests.response object
     
     response_dict = response.json() # Read response as a json (dictionary)
 

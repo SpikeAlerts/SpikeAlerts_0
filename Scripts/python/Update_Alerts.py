@@ -49,55 +49,42 @@ def get_active_alerts(pg_connection_dict):
 
 def sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict):
     '''
-    This sorts the sensor indices into sets based on if they are new, ongoing, or not spiked
-    spikes_df comes from Get_spikes_df() in Get_Spikes_df.py
+    This sorts the sensor indices into sets based on if they are new, ongoing, ended, or not spiked
     
+    Inputs: spikes_df - pd.DataFrame - from Get_spikes_df() in Get_Spikes_df.py
+            sensor_ids - pd.Series - from get_sensor_ids() in Get_Spikes_df
+            pg_connection_dict - dict - global variable
     '''
     
     # Get active alerts from database
 
-    conn = psycopg2.connect(**pg_connection_dict)
-
-    # Create json cursor
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''SELECT * 
-    FROM "Active Alerts Acute PurpleAir"
-    ''')
-
-    cur.execute(cmd) # Execute
-
-    conn.commit() # Committ command
-
-    # Convert response into dataframe
-
-    cols_for_active_alerts = ['alert_index', 'sensor_indices', 'start_time', 'max_reading']
-    active_alerts = pd.DataFrame(cur.fetchall(), columns = cols_for_active_alerts)
+    active_alerts_df = get_active_alerts(pg_connection_dict)
     
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
-    
-    # Check for:
+    # Check for 4 types of Sensor ID
+    # Using set operations between:
 
-    # 1) new,
-    # 2) ongoing, 
-    # 3) and ended alerts
-
-    # (set differences or intersection between sensor indices)
-
+    # Currently active
     current_active_spike_sensors = set(spikes_df.sensor_index) # From most recent api call
+
+    # Previously active
     if len(active_alerts) > 0:
-        previous_active_spike_sensors = set(active_alerts.sensor_indices.sum() # From our database
-        ) # The sensor_indices are given as lists of indices because we may cluster alerts eventually
+        previous_active_spike_sensors = set(active_alerts.sensor_indices.sum()) # From our database
+        # The sensor_indices are given as lists of indices because we may cluster alerts eventually
     else:
         previous_active_spike_sensors = set()
 
-    # The sets of sensor indices (new, ended, ongoing)
+    # The sets:
+
+    # 1) new
     new_spike_sensors = current_active_spike_sensors - previous_active_spike_sensors
+
+    # 2) ongoing, 
     ongoing_spike_sensors = current_active_spike_sensors.intersection(previous_active_spike_sensors)
+
+    # 3) ended alerts
     ended_spike_sensors = previous_active_spike_sensors - current_active_spike_sensors
+
+    # 4) Not Spiked
     not_spiked_sensors = set(sensor_ids.astype(int)) - current_active_spike_sensors
     
     return new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors

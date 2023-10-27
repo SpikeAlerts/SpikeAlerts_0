@@ -1,8 +1,12 @@
 import os
 from twilio.rest import Client
+# Getting .env information
+from dotenv import load_dotenv
 
-account_sid = os.environ['TWILIO_ACCOUNT_SID']
-auth_token = os.environ['TWILIO_AUTH_TOKEN']
+load_dotenv()
+
+account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+auth_token = os.getenv('TWILIO_AUTH_TOKEN')
 
 
 # basic send function that takes in a list of numbers and a list of messages. 
