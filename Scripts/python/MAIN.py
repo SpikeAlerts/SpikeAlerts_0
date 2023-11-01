@@ -136,14 +136,18 @@ while True:
             newest_alert_index = add_to_active_alerts(row, pg_connection_dict,
                                  runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
                                 ) # In Update_Alerts.py
-
-            # 2) Query users ST_Dwithin 1 kilometer & subscribed = TRUE -NOT DONE
             
-                # If #2 is not empty:
+            # 2) Query users ST_Dwithin 1 kilometer & subscribed = TRUE
+            
+            record_ids = Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # Using 1000 meters for now - can change
+
+                # if len(record_ids) > 0:
+
+                    # if now < late_time && now > early_time:
                 
-                # a) If within waking hours: Text users
-        	# Query users from #2 if both active_alerts and cached_alerts are empty then Compose Messages & concat to messages_df w/ record_id
-            # - NOT DONE  - do in Send_Alerts.py & .ipynb     
+                        # a)
+                	# Query users from #2 if both active_alerts and cached_alerts are empty then Compose Messages & concat to messages_df w/ record_id
+                    # - NOT DONE  - do in Send_Alerts.py & .ipynb     
     
                 # b) Add to #2's Active Alerts
             # - NOT DONE - do in Update_Alerts.py & .ipynb

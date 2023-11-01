@@ -20,6 +20,8 @@ CREATE table "Sign Up Information" -- This is our internal record keeping for us
 	subscribed boolean DEFAULT TRUE, -- Is the user wanting texts? 
 	geometry geometry);
 	
+CREATE INDEX user_gid ON "Sign Up Information" USING GIST(geometry);  -- Create spatial index
+	
 CREATE table "Reports Archive" -- These are for reporting to the City and future research
 	(report_id varchar(12), -- Unique Identifier with format #####-MMDDYY
 	start_time timestamp,
@@ -57,6 +59,8 @@ CREATE TABLE "PurpleAir Stations" -- See PurpleAir API - https://api.purpleair.c
 	altitude int,
 	geometry geometry
 );
+
+CREATE INDEX PurpleAir_gid ON "PurpleAir Stations" USING GIST(geometry);  -- Create spatial index for stations
 
 CREATE TABLE "Minneapolis Boundary" -- From MN Geocommons - https://gisdata.mn.gov/dataset/us-mn-state-metc-bdry-census2020counties-ctus
 (
