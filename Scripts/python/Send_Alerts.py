@@ -30,7 +30,7 @@ import pandas as pd
 
 def Users_nearby_sensor(pg_connection_dict, sensor_index, distance):
     '''
-    This function will return a list of record_ids from "Sign Up Information that are within the distance from the sensor
+    This function will return a list of record_ids from "Sign Up Information" that are within the distance from the sensor
     
     sensor_index = integer
     distance = integer (in meters)
@@ -68,3 +68,38 @@ def Users_nearby_sensor(pg_connection_dict, sensor_index, distance):
 
     return record_ids
 
+# ~~~~~~~~~~~~~~
+
+def Users_to_message_new_alert(pg_connection_dict, record_ids):
+    '''
+    This function will return a list of record_ids from "Sign Up Information" that have empty active and cached alerts and are in the list or record_ids given
+    
+    record_ids = a list of ids to check
+    
+    returns record_ids_to_text (a list)
+    '''
+    
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''
+    SELECT record_id
+    FROM "Sign Up Information"
+    WHERE active_alerts = {} AND cached_alerts = {} AND record_id = ANY ( {} );
+    ''').format(sql.Literal('{}'), sql.Literal('{}'), sql.Literal(record_ids))
+
+    cur.execute(cmd)
+
+    conn.commit()
+
+    record_ids_to_text = [i[0] for i in cur.fetchall()]
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close() 
+
+    return record_ids_to_text
+    
+# ~~~~~~~~~~~~~~ 
+   

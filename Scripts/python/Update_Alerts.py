@@ -67,8 +67,8 @@ def sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict):
     current_active_spike_sensors = set(spikes_df.sensor_index) # From most recent api call
 
     # Previously active
-    if len(active_alerts) > 0:
-        previous_active_spike_sensors = set(active_alerts.sensor_indices.sum()) # From our database
+    if len(active_alerts_df) > 0:
+        previous_active_spike_sensors = set(active_alerts_df.sensor_indices.sum()) # From our database
         # The sensor_indices are given as lists of indices because we may cluster alerts eventually
     else:
         previous_active_spike_sensors = set()
@@ -197,7 +197,7 @@ WHERE {} = ANY (sensor_indices);
 
 def add_to_archived_alerts(not_spiked_sensors, pg_connection_dict):
     '''
-    ended_spike_sensors is a set of sensor indices that have ended spikes Alerts
+    not_spiked_sensors is a set of sensor indices that have ended spikes Alerts
     '''
 
     # Get relevant sensor indices as list
@@ -265,7 +265,7 @@ def remove_active_alerts(not_spiked_sensors, pg_connection_dict):
     # Commit command
     conn.commit()
     
-    ended_alert_indices = list(cur.fetchall()[0])
+    ended_alert_indices = [i[0] for i in cur.fetchall()]
     
     cmd = sql.SQL('''
     DELETE FROM "Active Alerts Acute PurpleAir"

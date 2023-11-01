@@ -44,6 +44,7 @@ exec(open('Get_spikes_df.py').read())
 exec(open('Create_messages.py').read())
 exec(open('twilio_functions.py').read())
 exec(open('Update_Alerts.py').read())
+exec(open('Send_Alerts.py').read())
 
 ## Global Variables
 
@@ -79,6 +80,10 @@ timestep = int(sys.argv[3]) # Sleep time in between updates (in Minutes)
 # When to stop the program? (datetime)
 days_to_run = int(sys.argv[2]) # How many days will we run this?
 stoptime = dt.datetime.now() + dt.timedelta(days=days_to_run)
+
+# Waking hours
+too_late_hr = 21 # 9pm
+too_early_hr = 8 # 8am
 
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
@@ -118,11 +123,11 @@ while True:
 
     new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict) # In Update_Alerts.py
 
-    # Initialize messages_df
+    # Initialize message/record_id storage
     
-    messages_df = pd.DataFrame(np.empty(0, dtype = [('record_id', int),
-                                                    ('message', str)])
-                                    )
+    record_ids_to_text = []
+    messages = []
+    
     # NEW Spikes
     
     if len(new_spike_sensors) > 0:
@@ -137,20 +142,25 @@ while True:
                                  runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
                                 ) # In Update_Alerts.py
             
-            # 2) Query users ST_Dwithin 1 kilometer & subscribed = TRUE
+            # 2) Query users ST_Dwithin 1000 meters & subscribed = TRUE
             
-            record_ids = Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # Using 1000 meters for now - can change
+            record_ids_nearby = Users_nearby_sensor(pg_connection_dict, sensor_index, 1000) # in Send_Alerts.py
+            
+                if len(record_ids_nearby) > 0:
 
-                # if len(record_ids) > 0:
-
-                    # if now < late_time && now > early_time:
+                    if (now.hour < too_late_hr) & (now.hour > too_early_hr):
                 
-                        # a)
-                	# Query users from #2 if both active_alerts and cached_alerts are empty then Compose Messages & concat to messages_df w/ record_id
-                    # - NOT DONE  - do in Send_Alerts.py & .ipynb     
+                        # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
+                        record_ids_new_alerts = Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
+                        
+                        # Compose Messages & concat to messages/record_id_to_text   
+                        
+                        # Add to message/record_id storage for future messaging
+                        record_ids_to_text += record_ids_new_alerts
+                        messages += [new_alert_message(sensor_id)]*len(record_ids_new_alerts)
     
-                # b) Add to #2's Active Alerts
-            # - NOT DONE - do in Update_Alerts.py & .ipynb
+                    # b) Add to #2's Active Alerts
+                # - NOT DONE - do in Update_Alerts.py & .ipynb
 
     # ONGOING spikes
 
@@ -190,7 +200,7 @@ while True:
             # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
             # - NOT DONE - do in Send_Alerts.py & .ipynb
     
-            # b) Compose message telling user it's over w/ unique report option & concat to messages_df w/ record_id
+            # b) Compose message telling user it's over w/ unique report option & concat to messages/record_id_to_text
             # - NOT DONE - do in Send_Alerts.py & .ipynb
 
             # c) Clear the user's cached_alerts 
