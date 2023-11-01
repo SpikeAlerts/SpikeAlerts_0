@@ -144,23 +144,24 @@ while True:
             
             # 2) Query users ST_Dwithin 1000 meters & subscribed = TRUE
             
-            record_ids_nearby = Users_nearby_sensor(pg_connection_dict, sensor_index, 1000) # in Send_Alerts.py
+            record_ids_nearby = Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # in Send_Alerts.py
             
-                if len(record_ids_nearby) > 0:
+            if len(record_ids_nearby) > 0:
 
-                    if (now.hour < too_late_hr) & (now.hour > too_early_hr):
-                
-                        # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
-                        record_ids_new_alerts = Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
-                        
-                        # Compose Messages & concat to messages/record_id_to_text   
-                        
-                        # Add to message/record_id storage for future messaging
-                        record_ids_to_text += record_ids_new_alerts
-                        messages += [new_alert_message(sensor_id)]*len(record_ids_new_alerts)
-    
-                    # b) Add to #2's Active Alerts
-                # - NOT DONE - do in Update_Alerts.py & .ipynb
+                if (now.hour < too_late_hr) & (now.hour > too_early_hr):
+            
+                    # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
+                    record_ids_new_alerts = Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
+                    
+                    # Compose Messages & concat to messages/record_id_to_text   
+                    
+                    # Add to message/record_id storage for future messaging
+                    record_ids_to_text += record_ids_new_alerts
+                    messages += [new_alert_message(sensor_id)]*len(record_ids_new_alerts) # in Compose_Messages.py
+
+
+                # b) Add newest_alert_index to record_ids_nearby's Active Alerts
+            # - NOT DONE - do in Update_Alerts.py & .ipynb
 
     # ONGOING spikes
 
