@@ -99,8 +99,9 @@ def add_to_active_alerts(row, pg_connection_dict, runtime_for_db):
     '''
     This takes a row from spikes_df[spikes_df.sensor_index.isin(new_spike_sensors)],
     the connection dictionary,
-    cols_for_db = column names of database as a list (['sensor_index', 'start_time', 'max_reading'])
     runtime_for_db = when purpleair was queried as a string (runtime.strftime('%Y-%m-%d %H:%M:%S'))
+    
+    it returns the alert_index that it created
     
     '''
     cols_for_db = ['sensor_indices', 'start_time', 'max_reading']
@@ -126,6 +127,26 @@ def add_to_active_alerts(row, pg_connection_dict, runtime_for_db):
         )
     # Commit command
     conn.commit()
+    
+    # Get alert_index we just created
+    
+    cmd = sql.SQL('''SELECT alert_index
+    FROM "Active Alerts Acute PurpleAir"
+    WHERE sensor_indices = {}::int[];'''
+             ).format(sql.Literal([sensor_index]))
+    
+    cur.execute(cmd)     
+    
+    conn.commit() # Committ command
+    
+    newest_alert_index = cur.fetchall()[0][0]
+    
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+    
+    return newest_alert_index
 
 # 2) Update User's Active Alerts - NOT DONE
 # We want to add all alerts where a user's sensors of interest intersect with the an alert's sensor_indices

@@ -133,7 +133,7 @@ while True:
     
             # 1) Add to active alerts
         
-            add_to_active_alerts(row, pg_connection_dict,
+            newest_alert_index = add_to_active_alerts(row, pg_connection_dict,
                                  runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
                                 ) # In Update_Alerts.py
 
