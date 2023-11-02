@@ -1,6 +1,6 @@
 -- Run this file to initialize the database, schema, and tables for PurpleAir Monitor Readings in Minneapolis
 -- You can run this by using a psql command like:
--- psql "host=postgres.cla.umn.edu user=<your_username> password=<your_password> " -f initialize_db.sql
+-- psql "host=postgres.cla.umn.edu user=<your_username> password=<your_password> " -f initializedb.sql
 
 -- To Do beforehand
 
@@ -25,7 +25,7 @@ CREATE INDEX user_gid ON "Sign Up Information" USING GIST(geometry);  -- Create 
 CREATE table "Reports Archive" -- These are for reporting to the City and future research
 	(report_id varchar(12), -- Unique Identifier with format #####-MMDDYY
 	start_time timestamp,
-	duration_minues integer,
+	duration_minutes integer,
 	max_reading float, 
 	sensor_indices int [], -- List of Sensor Unique Identifiers
 	alert_indices bigint [] -- List of Alert Identifiers
