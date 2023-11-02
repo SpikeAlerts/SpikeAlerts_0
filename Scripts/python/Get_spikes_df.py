@@ -5,11 +5,12 @@
 import os # For working with Operating System
 import requests # Accessing the Web
 import datetime as dt # Working with dates/times
+import pytz # Timezones
 
 # Database 
 
-# import psycopg2
-# from psycopg2 import sql
+import psycopg2
+from psycopg2 import sql
 
 # Analysis
 
@@ -17,7 +18,38 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
-# Function to get Sensors Data
+### Function to get the sensor_ids from our database
+
+def get_sensor_ids(pg_connection_dict):
+    '''
+    This function gets the sensor_ids of all sensors in our database.
+    Returns a pandas Series
+    '''
+
+    # Connect
+    conn = psycopg2.connect(**pg_connection_dict) 
+    # Create cursor
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''SELECT sensor_index 
+    FROM "PurpleAir Stations"
+    ''')
+
+    cur.execute(cmd) # Execute
+    conn.commit() # Committ command
+
+    # Unpack response into pandas series
+
+    sensor_ids = pd.DataFrame(cur.fetchall(), columns = ['sensor_index']).sensor_index
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+
+    return sensor_ids
+
+# Function to get Sensors Data from PurpleAir
 
 def getSensorsData(query='', api_read_key=''):
 
@@ -37,7 +69,7 @@ def getSensorsData(query='', api_read_key=''):
 
 ### The Function to get spikes dataframe
 
-def Get_spikes_df(api, sensor_ids, spike_threshold):
+def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     ''' This function queries the PurpleAir API for sensors in the list of sensor_ids for readings over a spike threshold. 
     It will return a pandas dataframe with columns sensor_index (integer) and pm25 (float) as well as a runtime (datetime)
@@ -66,8 +98,8 @@ def Get_spikes_df(api, sensor_ids, spike_threshold):
     
     ### Call the api
     
-    runtime = dt.datetime.now() # The time the query is sent (datetime
-    response = getSensorsData(query_string, api)
+    runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # When we call - datetime in our timezone
+    response = getSensorsData(query_string, purpleAir_api) # The response is a requests.response object
     
     response_dict = response.json() # Read response as a json (dictionary)
 

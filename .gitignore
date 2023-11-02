@@ -1,3 +1,6 @@
 **/.ipynb_checkpoints/*
 Data/*
 Notebooks/2_Alerts/Text_Alert_scratch.ipynb
+Scripts/database/db_credentials.txt
+*/twilio.env
+*.env
