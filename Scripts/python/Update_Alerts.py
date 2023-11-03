@@ -47,7 +47,7 @@ def get_active_alerts(pg_connection_dict):
     
     return active_alerts_df
 
-def sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict):
+def sort_sensors_for_updates(spikes_df, sensor_ids, flagged_sensor_ids, pg_connection_dict):
     '''
     This sorts the sensor indices into sets based on if they are new, ongoing, ended, or not spiked
     
@@ -84,8 +84,8 @@ def sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict):
     # 3) ended alerts
     ended_spike_sensors = previous_active_spike_sensors - current_active_spike_sensors
 
-    # 4) Not Spiked
-    not_spiked_sensors = set(sensor_ids.astype(int)) - current_active_spike_sensors
+    # 4) Not Spiked = total sensor list - current active spikes - flagged sensors
+    not_spiked_sensors = set(sensor_ids.astype(int)) - current_active_spike_sensors - set(flagged_sensor_ids.astype(int))
     
     return new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors
     
