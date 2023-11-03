@@ -39,25 +39,24 @@ Reply STOP to end alertss'''
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def end_alert_messages(durations, max_readings, report_ids, report_url):
+def end_alert_message(duration, max_reading, report_id, base_report_url):
     '''
     Get a list of messages to send when an alert is over
-    This function returns a list of messages.
-    All inputs must be iterables except report_url which links directly to REDCap comment survey
+
+    inputs:
+    duration = integer (number of minutes)
+    max_reading = float
+    report_id = string
+    base_report_url is a string links directly to REDCap comment survey
+    
+    Returns a message (string)
     '''
-    
-    
-    messages = []
-    
-    for i in len(durations):
-    
-        message = f'''Alert Over
-Duration: {durations[i]} minutes 
-Max value: {max_readings[i]} ug/m3
-
-To report, use Report Id {report_ids[i]} here:
-{report_url}'''
-
-        messages += [message]
         
-    return messages
+    message = f'''Alert Over
+Duration: {duration} minutes 
+Max value: {max_reading} ug/m3
+
+Report here - {base_report_url+ '&report_id=' + report_id}'''
+    # See https://help.redcap.ualberta.ca/help-and-faq/survey-parameters for filling in variable in url
+        
+    return message
