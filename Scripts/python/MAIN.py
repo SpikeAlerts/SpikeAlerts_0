@@ -117,11 +117,11 @@ while True:
 
     # Query PurpleAir for Spikes
 
-    spikes_df, runtime = Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold) # In Get_Spikes_df.py
+    spikes_df, runtime, flagged_sensor_ids = Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold) # In Get_Spikes_df.py
 
     # Sort the spiked sensors into new, ongoing, ended spiked sensors, and not spiked sensors
 
-    new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = sort_sensors_for_updates(spikes_df, sensor_ids, pg_connection_dict) # In Update_Alerts.py
+    new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = sort_sensors_for_updates(spikes_df, sensor_ids, flagged_sensor_ids, pg_connection_dict) # In Update_Alerts.py
 
     # Initialize message/record_id storage
     

@@ -84,11 +84,12 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     spikes_df = Pandas DataFrame with fields sensor_index (integer) and pm25 (float)
     runtime = datetime object when query was run
+    flagged_sensors = Pandas Series of sensor_indices that came up flagged
     '''
     
     ### Setting parameters for API
     
-    fields = ['pm2.5_10minute']
+    fields = ['pm2.5_10minute', 'channel_flags', 'channel_state', 'last_seen']
 
     fields_string = 'fields=' + '%2C'.join(fields)
        
@@ -108,9 +109,24 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
 
     sensors_df = pd.DataFrame(data, columns = col_names) # Format as Pandas dataframe
     
+    # Correct last_seen
+
+    sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'],
+                                unit='s') - pd.Timedelta(hours=5) # UTC time is 5 hours ahead
+    
     ### Clean the data
     
-    clean_df = sensors_df.copy()
+    # Key
+    # Channel State -  0 = No PM, 3 = Both On
+    # Channel Flags - 0 = Normal, 1 = A Downgraded, 2 - B Downgraded, 3 - Both Downgraded
+    
+    flags = (sensors_df.channel_flags != 0 
+          ) | (sensors_df.channel_state == 0
+              ) |(sensors_df.last_seen < dt.datetime.now() - dt.timedelta(minutes=60)
+                 )
+
+    
+    clean_df = sensors_df[~flags].copy()
 
     # Rename column for ease of use
 
@@ -126,6 +142,12 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     ### Get spikes_df
     
-    spikes_df =  clean_df[clean_df.pm25 >= spike_threshold]
+    spikes_df = clean_df[clean_df.pm25 >= spike_threshold][['sensor_index', 'pm25']].reset_index(drop=True) 
     
-    return spikes_df, runtime
+    ### Get Flagged Sensors
+    
+    flagged_df = sensors_df[~sensors_df.sensor_index.isin(clean_df.sensor_index)]
+
+    flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
+    
+    return spikes_df, runtime, flagged_sensor_ids
