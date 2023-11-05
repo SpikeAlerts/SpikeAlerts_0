@@ -99,6 +99,10 @@ Spike Threshold = {spike_threshold}
 
 ''')
 
+# Initialize storage for reports_for_day
+
+reports_for_day = 0
+
 while True:
 
     now = dt.datetime.now() # The current time
@@ -107,9 +111,16 @@ while True:
 
     if stoptime < now: # Check if we've hit stoptime
         break
-        
-#    if new day:
-#        NOT DONE
+   
+   # ~~~~~~~~~~~~~~~~~~~~~
+   
+   # if new day: # NOT DONE
+   #     # Initialize reports_for_day
+   #     reports_for_day = 0
+   
+   # ~~~~~~~~~~~~~~~~~~~~~
+   
+   # Query PurpleAir
 
     #  Get the sensor_ids from sensors in our database
 
@@ -127,6 +138,8 @@ while True:
     
     record_ids_to_text = []
     messages = []
+    
+    # ~~~~~~~~~~~~~~~~~~~~~
     
     # NEW Spikes
     
@@ -148,7 +161,7 @@ while True:
             
             if len(record_ids_nearby) > 0:
 
-                if (now.hour < too_late_hr) & (now.hour > too_early_hr):
+                if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking Hours
             
                     # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
                     record_ids_new_alerts = Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
@@ -162,6 +175,8 @@ while True:
 
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
             # - NOT DONE - do in Update_Alerts.py & .ipynb
+
+    # ~~~~~~~~~~~~~~~~~~~~~
 
     # ONGOING spikes
 
@@ -177,6 +192,8 @@ while True:
             
             # 2) Merge/Cluster alerts? 
             # NOT DONE - FAR FUTURE TO DO
+
+    # ~~~~~~~~~~~~~~~~~~~~~
 
     # ENDED spikes
 
@@ -195,17 +212,40 @@ while True:
 
         # 4) Query for people to text (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
         # NOT DONE - do in Send_Alerts.py & .ipynb
-
+        
+        record_ids_end_alert_message = [] # Output of above
+                
         # 5) If #4 has elements: for each element (user) in #4
-            
-            # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
-            # - NOT DONE - do in Send_Alerts.py & .ipynb
-    
-            # b) Compose message telling user it's over w/ unique report option & concat to messages/record_id_to_text
-            # - NOT DONE - do in Send_Alerts.py & .ipynb
+        
+        if len(record_ids_end_alert_message) > 0:
+        
+            for record_id in record_ids_end_alert_message:
+                
+                # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
+                
+                report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
+                    
+                duration_minutes, max_reading = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
+                
+                reports_for_day += 1 
+                
+                if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking hours
 
-            # c) Clear the user's cached_alerts 
-            # - NOT DONE - do in Update_Alerts.py & .ipynb
+                    # b) Compose message telling user it's over w/ unique report option & concat to messages/record_id_to_text
+                    
+                    end_alert_message = end_alert_message(duration_minutes, max_reading, report_id, base_report_url)
+                    
+                    record_ids_to_text += [record_id]
+                    messages += [end_alert_message]
+
+                # c) Clear the user's cached_alerts 
+                # - NOT DONE - do in Update_Alerts.py & .ipynb
+                
+    # ~~~~~~~~~~~~~~~~~~~~~           
+    
+    # Send all messages - NOT DONE do in Send_Alerts.py & .ipynb
+    
+    # ~~~~~~~~~~~~~~~~~~~~~
 
     # SLEEP between updates
 

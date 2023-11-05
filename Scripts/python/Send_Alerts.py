@@ -114,6 +114,79 @@ def Users_to_message_new_alert(pg_connection_dict, record_ids):
     return record_ids_to_text
     
 # ~~~~~~~~~~~~~~ 
+def initialize_report(record_id, reports_for_day, pg_connection_dict):
+    '''
+    This function will initialize a unique report for a user in the database.
+
+    It will also return the duration_minutes/max_reading of the report
+    '''
+    
+    # Create Cursor for commands
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+
+    # Use the record_id to query for the user's cached_alerts
+    # Then aggregate from those alerts the start_time, time_difference, max_reading, and nested sensor_indices
+    # Unnest the sensor indices into an array of unique sensor_indices
+    # Lastly, it will insert all the information into "Reports Archive"
+    
+    cmd = sql.SQL('''WITH alert_cache as
+(
+	SELECT cached_alerts
+	FROM "Sign Up Information"
+	WHERE record_id = {} --inserted record_id
+), alerts as
+(
+	SELECT MIN(p.start_time) as start_time,
+			CURRENT_TIMESTAMP AT TIME ZONE 'America/Chicago' 
+				- MIN(p.start_time) as time_diff,
+			MAX(p.max_reading) as max_reading, 
+			ARRAY_AGG(p.sensor_indices) as sensor_indices
+	FROM "Archived Alerts Acute PurpleAir" p, alert_cache c
+	WHERE p.alert_index = ANY (c.cached_alerts)
+), unnested_sensors as 
+(
+	SELECT ARRAY_AGG(DISTINCT x.v) as sensor_indices
+	FROM alerts cross JOIN LATERAL unnest(alerts.sensor_indices) as x(v)
+)
+INSERT INTO "Reports Archive"
+SELECT {}, -- Inserted report_id
+        a.start_time, -- start_time
+		(((DATE_PART('day', a.time_diff) * 24) + 
+    		DATE_PART('hour', a.time_diff)) * 60 + 
+		 	DATE_PART('minute', a.time_diff)) as duration_minutes,
+			a.max_reading, -- max_reading
+		n.sensor_indices,
+		c.cached_alerts
+FROM alert_cache c, alerts a, unnested_sensors n;
+''').format(sql.Literal(record_id),
+            sql.Literal(report_id))
+
+    cur.execute(cmd)
+    # Commit command
+    conn.commit()
+
+    # Now get the information from that report
+
+    cmd = sql.SQL('''SELECT duration_minutes, max_reading
+             FROM "Reports Archive"
+             WHERE report_id = {};
+''').format(sql.Literal(report_id))
+
+    cur.execute(cmd)
+    # Commit command
+    conn.commit()
+
+    # Unpack response
+    duration_minutes, max_reading = cur.fetchall()[0]
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+
+    return duration_minutes, max_reading
+  
+# ~~~~~~~~~~~~~~ 
    
 def send_all_messages(record_ids, messages):
     '''
@@ -176,9 +249,7 @@ def update_user_table(record_ids, times):
     print(record_ids, times, messages_sent_new)
     #2. SQL statement that updates each record (identified by record_ids) with new times, messages_sent_new values
     print("fancy SQL to update the sign up table still pending")
-
-    # Close cursor
-    cur.close()
-    # Close connection
+    
     conn.close() 
+    conn.close()
     return
