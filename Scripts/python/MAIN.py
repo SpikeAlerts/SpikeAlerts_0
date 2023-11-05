@@ -171,11 +171,10 @@ while True:
                     # Add to message/record_id storage for future messaging
                     record_ids_to_text += record_ids_new_alerts
                     messages += [new_alert_message(sensor_id)]*len(record_ids_new_alerts) # in Compose_Messages.py
-
-
+                    
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
-            # - NOT DONE - do in Update_Alerts.py & .ipynb
-
+                update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
+                 
     # ~~~~~~~~~~~~~~~~~~~~~
 
     # ONGOING spikes
@@ -231,7 +230,7 @@ while True:
                 
                 if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking hours
 
-                    # b) Compose message telling user it's over w/ unique report option & concat to messages/record_id_to_text
+                    # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                     
                     end_alert_message = end_alert_message(duration_minutes, max_reading, report_id, base_report_url)
                     

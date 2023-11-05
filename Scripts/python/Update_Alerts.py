@@ -148,9 +148,40 @@ def add_to_active_alerts(row, pg_connection_dict, runtime_for_db):
     
     return newest_alert_index
 
-# 2) Update User's Active Alerts - NOT DONE
-# We want to add all alerts where a user's sensors of interest intersect with the an alert's sensor_indices
-# See https://www.postgresql.org/docs/current/arrays.html#ARRAYS-SEARCHING 
+# 2) Update User's Active Alerts
+
+def update_users_active_alerts(record_ids, alert_index, pg_connection_dict):
+    '''
+    This function takes a list of record_ids (users), an alert index (integer), and pg_connection_dict
+
+    It will add this alert index to all the record_ids' active_alerts
+    '''
+
+    # Create Cursor for commands
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+    
+    # This is really a great way to insert a lot of data
+
+    vals = [[sensor_index], runtime_for_db, reading]
+    
+    cmd = sql.SQL('''
+UPDATE "Sign Up Information"
+SET active_alerts = ARRAY_APPEND(active_alerts, {}) -- inserted alert_index
+WHERE record_id = ANY ( {} ); -- inserted record_ids 
+    ''').format(sql.Literal(alert_index),
+                sql.Literal(record_ids)
+               )
+
+    cur.execute(cmd
+        )
+    # Commit command
+    conn.commit()
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
 
