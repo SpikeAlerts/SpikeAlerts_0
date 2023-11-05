@@ -314,6 +314,33 @@ def remove_active_alerts(not_spiked_sensors, pg_connection_dict):
     
     return ended_alert_indices
     
+# ~~~~~~~~~~~~~~~~
+
+# 3) Transfer these alerts from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts
+
+def cache_alerts(ended_alert_indices, pg_connection_dict):
+    '''
+    This function transfers a list of ended_alert_indices from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts
+    '''
+    
+    # Create Cursor for commands
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+    
+    for alert_index in ended_alert_indices:
+    
+        cmd = sql.SQL('''
+        UPDATE "Sign Up Information"
+        SET active_alerts = ARRAY_REMOVE(active_alerts, {}), -- Inserted alert_index
+            cached_alerts = ARRAY_APPEND(cached_alerts, {}) -- Inserted alert_index
+        WHERE {} = ANY (active_alerts);
+        ''').format(sql.Literal(alert_index),
+                    sql.Literal(alert_index),
+                    sql.Literal(alert_index)
+                   )
+        cur.execute(cmd)
+    # Commit command
+    conn.commit()
     
     
     
