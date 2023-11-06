@@ -89,7 +89,7 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     ### Setting parameters for API
     
-    fields = ['pm2.5_10minute', 'channel_flags', 'channel_state', 'last_seen']
+    fields = ['pm2.5_10minute', 'channel_flags', 'last_seen']
 
     fields_string = 'fields=' + '%2C'.join(fields)
        
@@ -99,8 +99,8 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     ### Call the api
     
-    runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # When we call - datetime in our timezone
     response = getSensorsData(query_string, purpleAir_api) # The response is a requests.response object
+    runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # When we call - datetime in our timezone
     
     response_dict = response.json() # Read response as a json (dictionary)
 
@@ -118,12 +118,11 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     ### Clean the data
     
     # Key
-    # Channel State -  0 = No PM, 3 = Both On
     # Channel Flags - 0 = Normal, 1 = A Downgraded, 2 - B Downgraded, 3 - Both Downgraded
+    # last seen in the last hour is also a flag
     
     flags = (sensors_df.channel_flags != 0 
-          ) | (sensors_df.channel_state == 0
-              ) |(sensors_df.last_seen < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(minutes=60)
+          ) |(sensors_df.last_seen < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(minutes=60)
                  )
 
     
