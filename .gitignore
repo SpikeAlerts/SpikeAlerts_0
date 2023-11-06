@@ -5,3 +5,5 @@ Scripts/database/db_credentials.txt
 */twilio.env
 *.env
 Scripts/database/*up.sql
+*.DS_Store
+*.cpython-310.pyc 
