@@ -341,6 +341,28 @@ def cache_alerts(ended_alert_indices, pg_connection_dict):
         cur.execute(cmd)
     # Commit command
     conn.commit()
+ 
+# ~~~~~~~~~~~~~~~~
     
+# 5c) Clear a users' cache
+
+def clear_cached_alerts(record_ids, pg_connection_dict):
+    '''
+    This function clears the cached_alerts for all users with the given record_ids (a list of integers)
+    '''
+
+    # Create Cursor for commands
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
     
+    cmd = sql.SQL('''
+    UPDATE "Sign Up Information"
+    SET cached_alerts = {} 
+    WHERE record_id = ANY ( {} );
+    ''').format(sql.Literal('{}'),
+                sql.Literal(record_ids)
+               )
     
+    cur.execute(cmd)
+    # Commit command
+    conn.commit()

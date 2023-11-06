@@ -239,8 +239,9 @@ while True:
                     record_ids_to_text += [record_id]
                     messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
 
-                # c) Clear the user's cached_alerts 
-                # - NOT DONE - do in Update_Alerts.py & .ipynb
+                # c) Clear the users' cached_alerts 
+                
+                clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     
