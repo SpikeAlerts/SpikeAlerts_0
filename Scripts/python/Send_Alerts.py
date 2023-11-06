@@ -26,6 +26,18 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
+## Load Functions
+import twilio_functions
+
+creds = [os.getenv('DB_NAME'),
+         os.getenv('DB_USER'),
+         os.getenv('DB_PASS'),
+         os.getenv('DB_PORT'),
+         os.getenv('DB_HOST')
+        ]
+
+pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], creds)) 
+
 # Functions 
 
 def Users_nearby_sensor(pg_connection_dict, sensor_index, distance):
@@ -102,7 +114,6 @@ def Users_to_message_new_alert(pg_connection_dict, record_ids):
     return record_ids_to_text
     
 # ~~~~~~~~~~~~~~ 
-   
 def initialize_report(record_id, reports_for_day, pg_connection_dict):
     '''
     This function will initialize a unique report for a user in the database.
@@ -168,10 +179,79 @@ FROM alert_cache c, alerts a, unnested_sensors n;
 
     # Unpack response
     duration_minutes, max_reading = cur.fetchall()[0]
-
     # Close cursor
     cur.close()
     # Close connection
     conn.close()
 
     return duration_minutes, max_reading
+  
+# ~~~~~~~~~~~~~~ 
+   
+def send_all_messages(record_ids, messages):
+    '''
+    This function will
+    1. Send each message to the corresponding record_id
+    2. update the user signup data to reflect each new message sent (+1 messages_sent, time added)
+
+    Assumptions: 
+    - We won't message the same user twice within an invocation of this function. Otherwise we might need to aggregate the data before step #2
+    '''
+    numbers = get_phone_numbers(record_ids)
+    times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
+
+    update_user_table(record_ids, times)
+
+    return
+
+# ~~~~~~~~~~~~~
+
+def get_phone_numbers(users):
+    '''
+    takes a list of users and gets associated phone numbers
+    
+    Assumption: there will always be a valid phone number in REDcap data. Otherwise we would need to add error handling in send_all_messages
+    '''
+
+    print("getting numbers!")
+    
+    numbers = []
+    for record_id in users:
+        ### needs some contact with REDCap. API? 
+        # per ERD shouldn't have any interaction w/ Sign Up Info
+        numbers.append(int(record_id*100))
+    
+    return numbers
+
+# ~~~~~~~~~~~~~
+
+def update_user_table(record_ids, times):
+    '''
+    Takes a list of users + time objects and updates the "Sign Up Information" table
+    to increment each user's messages_sent and last_messaged
+    '''
+    print("updating Sign Up Information")
+
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''
+    SELECT messages_sent
+    FROM "Sign Up Information" u
+    WHERE u.record_id = ANY ( {} ); 
+    ''').format(sql.Literal(record_ids))
+
+    cur.execute(cmd)
+
+    conn.commit()
+
+    messages_sent_list = [i[0] for i in cur.fetchall()] # Unpack results into list
+    messages_sent_new = [v+1 for v in messages_sent_list]
+
+    print(record_ids, times, messages_sent_new)
+    #2. SQL statement that updates each record (identified by record_ids) with new times, messages_sent_new values
+    print("fancy SQL to update the sign up table still pending")
+    
+    conn.close() 
+    conn.close()
+    return

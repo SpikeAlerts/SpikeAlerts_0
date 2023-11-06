@@ -1,3 +1,8 @@
+'''
+using this to handle all text sending functions. 
+Drivers will be communicate_alert_start and communicate_alert_end
+'''
+
 import os
 from twilio.rest import Client
 # Getting .env information
@@ -5,25 +10,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+account_sid = os.environ['TWILIO_ACCOUNT_SID']
+auth_token = os.environ['TWILIO_AUTH_TOKEN']
 
-
-# basic send function that takes in a list of numbers and a list of messages. 
-
-def send_texts(numbers, messages):
-
+def send_texts(numbers, messages): # could refactor to send to user, that way we could inc. messages_sent in this function (better than havign to do it in parents)
+    '''basic send function that takes in a list of numbers + list of messages and sends them out
+    and returns a list of times that each message was sent
+    '''
     client = Client(account_sid, auth_token)
 
-    i = 0
-    for number in numbers:
-        client.messages.create(
-        body= messages[i],
-        from_='+18777484881',
-        to=number
-        )
-        i += 1
+    times = []
+    for number, message in zip(numbers, messages):
+        print(number, message)
+        msg = client.messages.create(
+        body= message,
+        from_='+18557014213',
+        to=os.environ['LOCAL_PHONE'] # replace with number in PROD
+        ) # should check error handling, if needed based on SDK
+        times.append(msg.date_updated)
 
-
-
-
+    return times
