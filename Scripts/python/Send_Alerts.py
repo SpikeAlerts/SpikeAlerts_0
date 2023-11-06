@@ -26,9 +26,6 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
-## Load Functions
-import twilio_functions
-
 creds = [os.getenv('DB_NAME'),
          os.getenv('DB_USER'),
          os.getenv('DB_PASS'),
@@ -99,6 +96,43 @@ def Users_to_message_new_alert(pg_connection_dict, record_ids):
     FROM "Sign Up Information"
     WHERE active_alerts = {} AND cached_alerts = {} AND record_id = ANY ( {} );
     ''').format(sql.Literal('{}'), sql.Literal('{}'), sql.Literal(record_ids))
+
+    cur.execute(cmd)
+
+    conn.commit()
+
+    record_ids_to_text = [i[0] for i in cur.fetchall()]
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close() 
+
+    return record_ids_to_text
+    
+# ~~~~~~~~~~~~~~
+
+def Users_to_message_end_alert(pg_connection_dict, ended_alert_indices):
+    '''
+    This function will return a list of record_ids from "Sign Up Information" that are subscribed, have empty active_alerts, non-empty cached_alerts, and cached_alerts intersect ended_alert_indices = empty (giving a 10 minute buffer before ending alerts - this can certainly change!)
+    
+    ended_alert_indices = a list of alert_ids that just ended
+    
+    returns record_ids_to_text (a list)
+    '''
+    
+    conn = psycopg2.connect(**pg_connection_dict)
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''
+    SELECT record_id
+    FROM "Sign Up Information"
+    WHERE subscribed = TRUE
+        AND active_alerts = {}
+    	AND ARRAY_LENGTH(cached_alerts, 1) > 0 
+    	AND NOT cached_alerts && {}::bigint[];
+    ''').format(sql.Literal('{}'),
+      sql.Literal(ended_alert_indices))
 
     cur.execute(cmd)
 
@@ -197,6 +231,9 @@ def send_all_messages(record_ids, messages):
     Assumptions: 
     - We won't message the same user twice within an invocation of this function. Otherwise we might need to aggregate the data before step #2
     '''
+    
+    import twilio_functions
+    
     numbers = get_phone_numbers(record_ids)
     times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
 

@@ -85,6 +85,10 @@ stoptime = dt.datetime.now() + dt.timedelta(days=days_to_run)
 too_late_hr = 21 # 9pm
 too_early_hr = 8 # 8am
 
+# Report URL
+
+base_report_url = 'https://redcap.ahc.umn.edu/surveys/?s=LN3HHDCJXYCKFCLE'
+
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
 
@@ -211,9 +215,8 @@ while True:
         cache_alerts(ended_alert_indices, pg_connection_dict) # in Update_Alerts.py & .ipynb
 
         # 4) Query for people to text (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
-        # NOT DONE - do in Send_Alerts.py & .ipynb
         
-        record_ids_end_alert_message = [] # Output of above
+        record_ids_end_alert_message = Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
                 
         # 5) If #4 has elements: for each element (user) in #4
         
@@ -233,10 +236,8 @@ while True:
 
                     # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                     
-                    end_alert_message = end_alert_message(duration_minutes, max_reading, report_id, base_report_url)
-                    
                     record_ids_to_text += [record_id]
-                    messages += [end_alert_message]
+                    messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
 
                 # c) Clear the user's cached_alerts 
                 # - NOT DONE - do in Update_Alerts.py & .ipynb
