@@ -79,7 +79,7 @@ timestep = int(sys.argv[3]) # Sleep time in between updates (in Minutes)
 
 # When to stop the program? (datetime)
 days_to_run = int(sys.argv[2]) # How many days will we run this?
-stoptime = dt.datetime.now() + dt.timedelta(days=days_to_run)
+stoptime = dt.datetime.now(pytz.timezone('America/Chicago')) + dt.timedelta(days=days_to_run)
 
 # Waking hours
 too_late_hr = 21 # 9pm
@@ -109,7 +109,7 @@ reports_for_day = 0
 
 while True:
 
-    now = dt.datetime.now() # The current time
+    now = dt.datetime.now(pytz.timezone('America/Chicago')) # The current time
 
     print(now)
 
@@ -252,7 +252,7 @@ while True:
 
     when_to_awake = now + dt.timedelta(minutes=timestep) 
 
-    sleep_seconds = (when_to_awake - dt.datetime.now()).seconds # - it takes about 3 seconds to run through everything
+    sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything
 
     time.sleep(sleep_seconds) # Sleep
 

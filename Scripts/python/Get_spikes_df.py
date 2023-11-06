@@ -112,7 +112,8 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     # Correct last_seen
 
     sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'],
-                                unit='s') - pd.Timedelta(hours=5) # UTC time is 5 hours ahead
+                                             utc = True,
+                                             unit='s').dt.tz_convert('America/Chicago')
     
     ### Clean the data
     
@@ -122,7 +123,7 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     
     flags = (sensors_df.channel_flags != 0 
           ) | (sensors_df.channel_state == 0
-              ) |(sensors_df.last_seen < dt.datetime.now() - dt.timedelta(minutes=60)
+              ) |(sensors_df.last_seen < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(minutes=60)
                  )
 
     
