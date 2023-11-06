@@ -204,7 +204,7 @@ def send_all_messages(record_ids, messages):
 
     return
 
-
+# ~~~~~~~~~~~~~
 
 def get_phone_numbers(users):
     '''
@@ -222,6 +222,8 @@ def get_phone_numbers(users):
         numbers.append(int(record_id*100))
     
     return numbers
+
+# ~~~~~~~~~~~~~
 
 def update_user_table(record_ids, times):
     '''
