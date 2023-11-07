@@ -213,33 +213,36 @@ while True:
         # 3) Transfer these alerts from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts 
         
         cache_alerts(ended_alert_indices, pg_connection_dict) # in Update_Alerts.py & .ipynb
-
-        # 4) Query for people to text (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
         
-        record_ids_end_alert_message = Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
-                
-        # 5) If #4 has elements: for each element (user) in #4
+    else:
+        ended_alert_indices = []
         
-        if len(record_ids_end_alert_message) > 0:
+    # 4) Query for people to text about ended alerts (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
         
-            for record_id in record_ids_end_alert_message:
-                
-                # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
-                    
-                duration_minutes, max_reading, report_id = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
-                
-                reports_for_day += 1 
-                
-                if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking hours
-
-                    # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
-                    
-                    record_ids_to_text += [record_id]
-                    messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
-
-            # c) Clear the users' cached_alerts 
+    record_ids_end_alert_message = Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
             
-            clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
+    # 5) If #4 has elements: for each element (user) in #4
+    
+    if len(record_ids_end_alert_message) > 0:
+    
+        for record_id in record_ids_end_alert_message:
+            
+            # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
+                
+            duration_minutes, max_reading, report_id = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
+            
+            reports_for_day += 1 
+            
+            if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking hours
+
+                # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
+                
+                record_ids_to_text += [record_id]
+                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
+
+        # c) Clear the users' cached_alerts 
+        
+        clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     

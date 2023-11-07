@@ -194,8 +194,6 @@ def update_max_reading(row, pg_connection_dict):
     sensor_index = row.sensor_index
     reading = row.pm25
 
-    # 1) Add to active alerts
-
     # Create Cursor for commands
     conn = psycopg2.connect(**pg_connection_dict)
     cur = conn.cursor()
@@ -337,7 +335,12 @@ def cache_alerts(ended_alert_indices, pg_connection_dict):
         cur.execute(cmd)
     # Commit command
     conn.commit()
- 
+    
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+    
 # ~~~~~~~~~~~~~~~~
     
 # 5c) Clear a users' cache
@@ -362,3 +365,8 @@ def clear_cached_alerts(record_ids, pg_connection_dict):
     cur.execute(cmd)
     # Commit command
     conn.commit()
+    
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
