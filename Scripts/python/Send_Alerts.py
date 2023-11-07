@@ -152,7 +152,7 @@ def initialize_report(record_id, reports_for_day, pg_connection_dict):
     '''
     This function will initialize a unique report for a user in the database.
 
-    It will also return the duration_minutes/max_reading of the report
+    It will also return the duration_minutes/max_reading/report_id of the report
     '''
     
     # Create Report_id
@@ -222,7 +222,7 @@ FROM alert_cache c, alerts a, unnested_sensors n;
     # Close connection
     conn.close()
 
-    return duration_minutes, max_reading
+    return duration_minutes, max_reading, report_id
   
 # ~~~~~~~~~~~~~~ 
    

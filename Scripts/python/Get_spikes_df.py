@@ -102,52 +102,58 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
     response = getSensorsData(query_string, purpleAir_api) # The response is a requests.response object
     runtime = dt.datetime.now(pytz.timezone('America/Chicago')) # When we call - datetime in our timezone
     
-    response_dict = response.json() # Read response as a json (dictionary)
+    if response.status_code != 200:
+        print('ERROR in PurpleAir API Call')
+        print('HTTP Status: ' + str(response.status_code))
+        print(response.text)
+        
+    else:
+        response_dict = response.json() # Read response as a json (dictionary)
 
-    col_names = response_dict['fields']
-    data = np.array(response_dict['data'])
+        col_names = response_dict['fields']
+        data = np.array(response_dict['data'])
 
-    sensors_df = pd.DataFrame(data, columns = col_names) # Format as Pandas dataframe
+        sensors_df = pd.DataFrame(data, columns = col_names) # Format as Pandas dataframe
+        
+        # Correct last_seen
+
+        sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'],
+                                                 utc = True,
+                                                 unit='s').dt.tz_convert('America/Chicago')
     
-    # Correct last_seen
+        ### Clean the data
+        
+        # Key
+        # Channel Flags - 0 = Normal, 1 = A Downgraded, 2 - B Downgraded, 3 - Both Downgraded
+        # last seen in the last hour is also a flag
+        
+        flags = (sensors_df.channel_flags != 0 
+              ) |(sensors_df.last_seen < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(minutes=60)
+                     )
 
-    sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'],
-                                             utc = True,
-                                             unit='s').dt.tz_convert('America/Chicago')
-    
-    ### Clean the data
-    
-    # Key
-    # Channel Flags - 0 = Normal, 1 = A Downgraded, 2 - B Downgraded, 3 - Both Downgraded
-    # last seen in the last hour is also a flag
-    
-    flags = (sensors_df.channel_flags != 0 
-          ) |(sensors_df.last_seen < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(minutes=60)
-                 )
+        
+        clean_df = sensors_df[~flags].copy()
 
-    
-    clean_df = sensors_df[~flags].copy()
+        # Rename column for ease of use
 
-    # Rename column for ease of use
+        clean_df = clean_df.rename(columns = {'pm2.5_10minute':'pm25'})
 
-    clean_df = clean_df.rename(columns = {'pm2.5_10minute':'pm25'})
+        # Remove obvious error values
 
-    # Remove obvious error values
+        clean_df = clean_df[clean_df.pm25 < 1000] 
 
-    clean_df = clean_df[clean_df.pm25 < 1000] 
+        # Remove NaNs
 
-    # Remove NaNs
+        clean_df = clean_df.dropna()
+        
+        ### Get spikes_df
+        
+        spikes_df = clean_df[clean_df.pm25 >= spike_threshold][['sensor_index', 'pm25']].reset_index(drop=True) 
+        
+        ### Get Flagged Sensors
+        
+        flagged_df = sensors_df[~sensors_df.sensor_index.isin(clean_df.sensor_index)]
 
-    clean_df = clean_df.dropna()
-    
-    ### Get spikes_df
-    
-    spikes_df = clean_df[clean_df.pm25 >= spike_threshold][['sensor_index', 'pm25']].reset_index(drop=True) 
-    
-    ### Get Flagged Sensors
-    
-    flagged_df = sensors_df[~sensors_df.sensor_index.isin(clean_df.sensor_index)]
-
-    flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
+        flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
     
     return spikes_df, runtime, flagged_sensor_ids

@@ -174,7 +174,7 @@ while True:
                     
                     # Add to message/record_id storage for future messaging
                     record_ids_to_text += record_ids_new_alerts
-                    messages += [new_alert_message(sensor_id)]*len(record_ids_new_alerts) # in Compose_Messages.py
+                    messages += [new_alert_message(row.sensor_index)]*len(record_ids_new_alerts) # in Compose_Messages.py
                     
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
                 update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
@@ -226,7 +226,7 @@ while True:
                 
                 # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
                     
-                duration_minutes, max_reading = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
+                duration_minutes, max_reading, report_id = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
                 
                 reports_for_day += 1 
                 
@@ -245,13 +245,11 @@ while True:
     
     # Send all messages - NOT DONE do in Send_Alerts.py & .ipynb
     
-    # For testing
-    
-#    f = open("test.txt", "a")
-#    for i in range(len(record_ids_to_text)):
-#        line = f'{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
-#        f.write()
-#    f.close()
+    f = open("test.txt", "a")
+    for i in range(len(record_ids_to_text)):
+        line = f'{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
+        f.write(line)
+    f.close()
     
     # ~~~~~~~~~~~~~~~~~~~~~
 
