@@ -155,6 +155,10 @@ def initialize_report(record_id, reports_for_day, pg_connection_dict):
     It will also return the duration_minutes/max_reading of the report
     '''
     
+    # Create Report_id
+    
+    report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
+    
     # Create Cursor for commands
     conn = psycopg2.connect(**pg_connection_dict)
     cur = conn.cursor()

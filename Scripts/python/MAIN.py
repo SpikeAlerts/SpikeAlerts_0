@@ -225,8 +225,6 @@ while True:
             for record_id in record_ids_end_alert_message:
                 
                 # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
-                
-                report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
                     
                 duration_minutes, max_reading = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
                 
@@ -239,13 +237,21 @@ while True:
                     record_ids_to_text += [record_id]
                     messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
 
-                # c) Clear the users' cached_alerts 
-                
-                clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
+            # c) Clear the users' cached_alerts 
+            
+            clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     
     # Send all messages - NOT DONE do in Send_Alerts.py & .ipynb
+    
+    # For testing
+    
+#    f = open("test.txt", "a")
+#    for i in range(len(record_ids_to_text)):
+#        line = f'{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
+#        f.write()
+#    f.close()
     
     # ~~~~~~~~~~~~~~~~~~~~~
 
