@@ -161,10 +161,6 @@ def update_users_active_alerts(record_ids, alert_index, pg_connection_dict):
     conn = psycopg2.connect(**pg_connection_dict)
     cur = conn.cursor()
     
-    # This is really a great way to insert a lot of data
-
-    vals = [[sensor_index], runtime_for_db, reading]
-    
     cmd = sql.SQL('''
 UPDATE "Sign Up Information"
 SET active_alerts = ARRAY_APPEND(active_alerts, {}) -- inserted alert_index

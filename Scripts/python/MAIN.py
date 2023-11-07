@@ -247,7 +247,7 @@ while True:
     
     f = open("test.txt", "a")
     for i in range(len(record_ids_to_text)):
-        line = f'{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
+        line = f'\n\n{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
         f.write(line)
     f.close()
     
