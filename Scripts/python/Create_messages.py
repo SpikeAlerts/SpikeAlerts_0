@@ -32,7 +32,7 @@ def new_alert_message(sensor_index):
 Air quality is unhealthy in your area
 https://map.purpleair.com/?select={sensor_index}/44.9723/-93.2447
 
-Reply STOP to end alertss'''
+Text STOP to unsubscribe'''
         
     return message
 
