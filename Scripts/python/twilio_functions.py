@@ -13,7 +13,7 @@ load_dotenv()
 account_sid = os.environ['TWILIO_ACCOUNT_SID']
 auth_token = os.environ['TWILIO_AUTH_TOKEN']
 
-def send_texts(numbers, messages): # could refactor to send to user, that way we could inc. messages_sent in this function (better than havign to do it in parents)
+def send_texts(numbers, messages): 
     '''basic send function that takes in a list of numbers + list of messages and sends them out
     and returns a list of times that each message was sent
     '''
@@ -24,7 +24,7 @@ def send_texts(numbers, messages): # could refactor to send to user, that way we
         print(number, message)
         msg = client.messages.create(
         body= message,
-        from_='+18557014213',
+        from_=os.environ['TWILIO_NUMBER'],
         to=os.environ['LOCAL_PHONE'] # replace with number in PROD
         ) # should check error handling, if needed based on SDK
         times.append(msg.date_updated)
