@@ -22,7 +22,7 @@ import pandas as pd
 
 def get_sensor_ids(pg_connection_dict):
     '''
-    This function gets the sensor_ids of all sensors in our database.
+    This function gets the sensor_ids of all sensors in our database that are not flagged.
     Returns a pandas Series
     '''
 
@@ -33,6 +33,7 @@ def get_sensor_ids(pg_connection_dict):
 
     cmd = sql.SQL('''SELECT sensor_index 
     FROM "PurpleAir Stations"
+    WHERE channel_flags = 0;
     ''')
 
     cur.execute(cmd) # Execute
@@ -48,6 +49,33 @@ def get_sensor_ids(pg_connection_dict):
     conn.close()
 
     return sensor_ids
+    
+### Function to flag sensors in our database
+
+def flag_sensors(sensor_indices, pg_connection_dict):
+    '''
+    This function sets the channel_flags = 4 in our database on the given sensor_indices (list)
+    '''
+
+    # Connect
+    conn = psycopg2.connect(**pg_connection_dict) 
+    # Create cursor
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''UPDATE "PurpleAir Stations"
+    SET channel_flags = 4
+    WHERE sensor_index = ANY ( {} );
+    ''').format(sql.Literal(sensor_indices))
+
+    cur.execute(cmd) # Execute
+    conn.commit() # Committ command
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+
+    return
 
 # Function to get Sensors Data from PurpleAir
 
@@ -120,6 +148,11 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
         sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'],
                                                  utc = True,
                                                  unit='s').dt.tz_convert('America/Chicago')
+                                                 
+        # Correct sensor_index/channel_flags
+
+        sensors_df['sensor_index'] = sensors_df['sensor_index'].astype(int)
+        sensors_df['channel_flags'] = sensors_df['channel_flags'].astype(int)
     
         ### Clean the data
         
@@ -151,9 +184,13 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
         spikes_df = clean_df[clean_df.pm25 >= spike_threshold][['sensor_index', 'pm25']].reset_index(drop=True) 
         
         ### Get Flagged Sensors
-        
+            
         flagged_df = sensors_df[~sensors_df.sensor_index.isin(clean_df.sensor_index)]
 
         flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
+
+        # Flag them in our database
+
+        flag_sensors(flagged_sensor_ids.to_list(), pg_connection_dict)
     
     return spikes_df, runtime, flagged_sensor_ids
