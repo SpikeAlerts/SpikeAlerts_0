@@ -33,7 +33,7 @@ def get_sensor_ids(pg_connection_dict):
 
     cmd = sql.SQL('''SELECT sensor_index 
     FROM "PurpleAir Stations"
-    WHERE channel_flags = 0;
+    WHERE channel_flags = 0 AND channel_state = 3; -- channel_flags are updated regularly, channel_state <- managed by someone - 3 = on, 0 = off
     ''')
 
     cur.execute(cmd) # Execute

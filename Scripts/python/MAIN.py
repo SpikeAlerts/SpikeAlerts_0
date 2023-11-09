@@ -45,6 +45,7 @@ exec(open('Create_messages.py').read())
 exec(open('twilio_functions.py').read())
 exec(open('Update_Alerts.py').read())
 exec(open('Send_Alerts.py').read())
+exec(open('Daily_Updates.py').read())
 
 ## Global Variables
 
@@ -79,7 +80,8 @@ timestep = int(sys.argv[3]) # Sleep time in between updates (in Minutes)
 
 # When to stop the program? (datetime)
 days_to_run = int(sys.argv[2]) # How many days will we run this?
-stoptime = dt.datetime.now(pytz.timezone('America/Chicago')) + dt.timedelta(days=days_to_run)
+starttime = dt.datetime.now(pytz.timezone('America/Chicago')) 
+stoptime = starttime + dt.timedelta(days=days_to_run)
 
 # Waking hours
 too_late_hr = 21 # 9pm
@@ -103,8 +105,9 @@ Spike Threshold = {spike_threshold}
 
 ''')
 
-# Initialize storage for reports_for_day
+# Initialize next update time, storage for reports_for_day
 
+next_update_time = starttime.replace(hour=8, minute = 0) + dt.timedelta(days=1)
 reports_for_day = 0
 
 while True:
@@ -118,15 +121,20 @@ while True:
    
    # ~~~~~~~~~~~~~~~~~~~~~
    
-   # if new day: # NOT DONE
-   #     # Initialize reports_for_day
-   #     reports_for_day = 0
+    if now > next_update_time: # NOT DONE
+    
+        # Initialize reports_for_day
+        reports_for_day = 0
+        
+        # Reset Sensor Flags
+        Refresh_SensorFlags(pg_connection_dict)
+        
+        # Get next update time (in 1 day)
+        next_update_time = next_update_time + dt.timedelta(days=1)
    
    # ~~~~~~~~~~~~~~~~~~~~~
    
-   # Query PurpleAir
-
-    #  Get the sensor_ids from sensors in our database
+    #  Get the sensor_ids from sensors in our database that are not flagged
 
     sensor_ids = get_sensor_ids(pg_connection_dict) # In Get_Spikes_df.py
 
