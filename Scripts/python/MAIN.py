@@ -14,6 +14,7 @@
 
 import os # For working with Operating System
 import sys # System arguments
+from io import StringIO # String input/output
 from dotenv import load_dotenv # Loading .env info
 
 # Web
@@ -60,6 +61,7 @@ redCap_token_report = os.getenv('REDCAP_TOKEN_REPORT') # Report Token
 
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_NUMBER = os.getenv('TWILIO_NUMBER')
 
 # Database credentials
 
@@ -254,13 +256,21 @@ while True:
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     
-    # Send all messages - NOT DONE do in Send_Alerts.py & .ipynb
+    # Send all messages
     
-    f = open("test.txt", "a")
-    for i in range(len(record_ids_to_text)):
-        line = f'\n\n{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
-        f.write(line)
-    f.close()
+    if len(record_ids_to_text) > 0:
+        send_all_messages(record_ids_to_text, messages,
+                          redCap_token_signUp,
+                          TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
+                          pg_connection_dict) # in Send_Alerts.py & .ipynb
+        
+        # Save them locally - for developers
+        
+        f = open("test.txt", "a")
+        for i in range(len(record_ids_to_text)):
+            line = f'\n\n{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
+            f.write(line)
+        f.close()
     
     # ~~~~~~~~~~~~~~~~~~~~~
 

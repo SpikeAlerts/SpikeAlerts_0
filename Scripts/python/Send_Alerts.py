@@ -228,7 +228,7 @@ FROM alert_cache c, alerts a, unnested_sensors n;
   
 # ~~~~~~~~~~~~~~ 
    
-def send_all_messages(record_ids, messages):
+def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER, pg_connection_dict):
     '''
     This function will
     1. Send each message to the corresponding record_id
@@ -238,12 +238,15 @@ def send_all_messages(record_ids, messages):
     - We won't message the same user twice within an invocation of this function. Otherwise we might need to aggregate the data before step #2
     '''
     
-    import twilio_functions
+    #import twilio_functions # This didn't work with my version yet, leaving for future reference
     
-    numbers = get_phone_numbers(record_ids, os.getenv('REDCAP_TOKEN_SIGNUP'))
-    times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
-
-    update_user_table(record_ids, times)
+    numbers = get_phone_numbers(record_ids, redCap_token_signUp)
+    times = send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+    
+    # This didn't work with my version yet, leaving for future reference
+    #times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
+    
+    update_user_table(record_ids, times, pg_connection_dict)
 
     return
 
@@ -300,7 +303,7 @@ def get_phone_numbers(record_ids, redCap_token_signUp):
     
     # Unpack the response
     
-    if r.status_code == 200:
+    if r.status_code == 200 and r.text != '\n':
         
         df = pd.read_csv(StringIO(r.text)) # Read as a dataframe
         
@@ -315,7 +318,7 @@ def get_phone_numbers(record_ids, redCap_token_signUp):
 
 # ~~~~~~~~~~~~~
 
-def update_user_table(record_ids, times):
+def update_user_table(record_ids, times, pg_connection_dict):
     '''
     Takes a list of users + time objects and updates the "Sign Up Information" table
     to increment each user's messages_sent and last_messaged
