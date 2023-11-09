@@ -24,7 +24,7 @@ def send_texts(numbers, messages): # could refactor to send to user, that way we
         print(number, message)
         msg = client.messages.create(
         body= message,
-        from_='+18557014213',
+        from_=os.environ['TWILIO_NUMBER'],
         to=os.environ['LOCAL_PHONE'] # replace with number in PROD
         ) # should check error handling, if needed based on SDK
         times.append(msg.date_updated)

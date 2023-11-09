@@ -26,6 +26,8 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
+load_dotenv()
+
 creds = [os.getenv('DB_NAME'),
          os.getenv('DB_USER'),
          os.getenv('DB_PASS'),
@@ -238,7 +240,7 @@ def send_all_messages(record_ids, messages):
     
     import twilio_functions
     
-    numbers = get_phone_numbers(record_ids)
+    numbers = get_phone_numbers(record_ids, os.getenv('REDCAP_TOKEN_SIGNUP'))
     times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
 
     update_user_table(record_ids, times)
@@ -257,7 +259,6 @@ def get_phone_numbers(record_ids, redCap_token_signUp):
     
     Assumption: there will always be a valid phone number in REDcap data. Otherwise we would need to add error handling in send_all_messages
     '''
-    
     # Initialize return value
     
     phone_numbers = []
@@ -319,28 +320,44 @@ def update_user_table(record_ids, times):
     Takes a list of users + time objects and updates the "Sign Up Information" table
     to increment each user's messages_sent and last_messaged
     '''
-    print("updating Sign Up Information")
+    #print("updating Sign Up Information", record_ids, times)
 
     conn = psycopg2.connect(**pg_connection_dict)
     cur = conn.cursor()
 
+    # dataframe is sorted by record ID because SQL messages_sent query needs to be ordered (and this needs to match
+    sorted = pd.DataFrame({'record_ids': record_ids,'times': times}).sort_values(by = "record_ids")  
+
     cmd = sql.SQL('''
     SELECT messages_sent
     FROM "Sign Up Information" u
-    WHERE u.record_id = ANY ( {} ); 
+    WHERE u.record_id = ANY ( {} )
+    ORDER BY u.record_id asc; 
     ''').format(sql.Literal(record_ids))
 
     cur.execute(cmd)
-
     conn.commit()
 
     messages_sent_list = [i[0] for i in cur.fetchall()] # Unpack results into list
     messages_sent_new = [v+1 for v in messages_sent_list]
+    sorted["messages_sent_new"] = messages_sent_new
 
-    print(record_ids, times, messages_sent_new)
-    #2. SQL statement that updates each record (identified by record_ids) with new times, messages_sent_new values
-    print("fancy SQL to update the sign up table still pending")
+    # SQL statement that updates each record (identified by record_ids) with new times, messages_sent_new values
+    # if this ever has performance trouble, we could try https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html
+    # which would require record_id to be made into a foreign key  
+    for id, time, msg_inc in zip(sorted["record_ids"], sorted["times"], sorted["messages_sent_new"]):
+        cmd = sql.SQL('''
+        UPDATE "Sign Up Information"
+        SET last_messaged = {lm}, messages_sent = {ms} 
+        WHERE record_id =  {ri} ;
+        ''').format(ri = sql.Literal(id),
+                    lm = sql.Literal(time),
+                    ms = sql.Literal(msg_inc)
+                    )
+        cur.execute(cmd)
     
-    conn.close() 
+    conn.commit()
+    
+    cur.close()
     conn.close()
     return
