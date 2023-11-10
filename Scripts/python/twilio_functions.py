@@ -60,6 +60,8 @@ def check_unsubscriptions(numbers, account_sid, auth_token):
                 if message.body in stop_key_words: # If stopword
 
                     unsubscribed_indices += [i] # Keep track of that list index
+                    
+                    break
 
     return unsubscribed_indices
     
@@ -71,9 +73,11 @@ def delete_twilio_info(numbers, account_sid, auth_token):
 
     client = Client(account_sid, auth_token)
 
-    # Iterate through the numbers 
+    # Iterate through the unique numbers 
     
-    for number in numbers:
+    numbers_unique = np.unique(numbers)
+    
+    for number in numbers_unique:
         
         messages_from = client.messages.list(from_=number) # Check if the numbers have responded, messages_from is a list twilio objects
         
