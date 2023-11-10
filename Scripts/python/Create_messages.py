@@ -19,7 +19,7 @@ import pandas as pd
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def new_alert_message(sensor_index):
+def new_alert_message(sensor_index, verfied_number = True):
     '''
     Get a message for a new alert at a sensor_index
     # Composes and returns a single message
@@ -29,9 +29,18 @@ def new_alert_message(sensor_index):
     # Short version (1 segment)
     
     message = f'''SPIKE ALERT!
-Air quality is unhealthy in your area
-https://map.purpleair.com/?select={sensor_index}/44.9723/-93.2447
-
+Air quality is unhealthy in your area'''
+    
+    # URLs cannot be sent until phone number is verified
+    if verfied_number:
+        message = message + '''
+https://map.purpleair.com/?select={sensor_index}/44.9723/-93.2447'''
+    else:
+        message = message + '''
+        Please see PurpleAir'''
+        
+    message = message + '''
+    
 Text STOP to unsubscribe'''
         
     return message
@@ -39,7 +48,7 @@ Text STOP to unsubscribe'''
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def end_alert_message(duration, max_reading, report_id, base_report_url):
+def end_alert_message(duration, max_reading, report_id, base_report_url, verfied_number = True):
     '''
     Get a list of messages to send when an alert is over
 
@@ -56,7 +65,13 @@ def end_alert_message(duration, max_reading, report_id, base_report_url):
 Duration: {duration} minutes 
 Max value: {max_reading} ug/m3
 
-Report here - {base_report_url+ '&report_id=' + report_id}'''
+Report here - '''
+    
+    # URLs cannot be sent until phone number is verified
+    if verfied_number:
+        message = message + f"{base_report_url+ '&report_id=' + report_id}"
+    else:
+        message = message + f'URL coming soon... Report ID: {report_id}'
     # See https://help.redcap.ualberta.ca/help-and-faq/survey-parameters for filling in variable in url
         
     return message

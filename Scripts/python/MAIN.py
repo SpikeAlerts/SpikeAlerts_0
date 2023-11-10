@@ -184,7 +184,7 @@ while True:
                     
                     # Add to message/record_id storage for future messaging
                     record_ids_to_text += record_ids_new_alerts
-                    messages += [new_alert_message(row.sensor_index)]*len(record_ids_new_alerts) # in Compose_Messages.py
+                    messages += [new_alert_message(row.sensor_index, verfied_number = False)]*len(record_ids_new_alerts) # in Compose_Messages.py
                     
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
                 update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
@@ -248,7 +248,7 @@ while True:
                 # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                 
                 record_ids_to_text += [record_id]
-                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url)]
+                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number = False)]
 
         # c) Clear the users' cached_alerts 
         
@@ -259,6 +259,7 @@ while True:
     # Send all messages
     
     if len(record_ids_to_text) > 0:
+    
         send_all_messages(record_ids_to_text, messages,
                           redCap_token_signUp,
                           TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
@@ -282,5 +283,6 @@ while True:
 
     time.sleep(sleep_seconds) # Sleep
 
+send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
 print("Terminating Program")
