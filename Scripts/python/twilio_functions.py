@@ -27,6 +27,56 @@ def send_texts(numbers, messages, account_sid, auth_token, twilio_number): # cou
         from_=twilio_number,
         to=number # replace with number in PROD
         ) # should check error handling, if needed based on SDK
-        times.append(msg.date_updated)
-
+        
+        time.sleep(1) # Sleeping for 1 second between sending messages
+        
+        times.append(msg.date_updated.astimezone(pytz.timezone('America/Chicago'))) # Append times sent <- these come in utc
+        
     return times
+    
+def check_unsubscriptions(numbers, account_sid, auth_token):
+    '''Returns the indices of the phone numbers in numbers that have unsubscribed
+    Which corresponds to record_ids_to_text'''
+
+
+    unsubscribed_indices = []
+    
+    stop_key_words = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'] # see https://support.twilio.com/hc/en-us/articles/223134027-Twilio-support-for-opt-out-keywords-SMS-STOP-filtering-
+
+    # Set up Twilio Client
+
+    client = Client(account_sid, auth_token)
+
+    # Iterate through the numbers 
+    
+    for i, number in enumerate(numbers):
+        
+        messages_from = client.messages.list(from_=number) # Check if the numbers have responded, messages_from is a list twilio objects
+
+        if len(messages_from) > 0: # If yes
+
+            for message in messages_from: # What have they said?
+    
+                if message.body in stop_key_words: # If stopword
+
+                    unsubscribed_indices += [i] # Keep track of that list index
+
+    return unsubscribed_indices
+    
+def delete_twilio_info(numbers, account_sid, auth_token):
+    '''This function deletes texts from phone numbers in twilio
+    '''
+
+    # Set up Twilio Client
+
+    client = Client(account_sid, auth_token)
+
+    # Iterate through the numbers 
+    
+    for number in numbers:
+        
+        messages_from = client.messages.list(from_=number) # Check if the numbers have responded, messages_from is a list twilio objects
+        
+        for message in messages_from:
+        
+            message.delete()

@@ -240,13 +240,38 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     
     #import twilio_functions # This didn't work with my version yet, leaving for future reference
     
-    numbers = get_phone_numbers(record_ids, redCap_token_signUp)
-    times = send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+    numbers = get_phone_numbers(record_ids, redCap_token_signUp) # See Send_Alerts.py
+    
+    # Check Unsubscriptions
+    
+    unsubscribed_indices = check_unsubscriptions(numbers, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) # See twilio_functions.py
+    
+    if len(unsubscribed_indices) > 0:
+    
+        # Unsubscribe from our database - see Daily_Updates.py
+        record_ids_to_unsubscribe = list(np.array(record_ids)[unsubscribed_indices])
+        Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
+        
+        # Delete from Twilio - See twilio_functions.py
+        phone_numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
+        delete_twilio_info(phone_numbers_to_unsubscribe, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        
+        # pop() unsubscriptions from numbers/record_ids/messages list
+        
+        for unsubscribed_index in unsubscribed_indices:
+            
+            numbers.pop(unsubscribed_index)
+            record_ids.pop(unsubscribed_index)
+            messages.pop(unsubscribed_index)
+        
+    # Send messages
+    
+    times = send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
     
     # This didn't work with my version yet, leaving for future reference
     #times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
     
-    update_user_table(record_ids, times, pg_connection_dict)
+    update_user_table(record_ids, times, pg_connection_dict) # See Send_Alerts.py
 
     return
 
