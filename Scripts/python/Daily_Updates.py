@@ -81,3 +81,7 @@ WHERE record_id = ANY ( {} );
 #    'filterLogic': filterLogic_str  
 #    }
 #    r = requests.post('https://redcap.ahc.umn.edu/api/',data=data)    
+
+    # TWILIO - See twilio_functions.py
+#    phone_numbers_to_unsubscribe = Something from REDCap
+#    delete_twilio_info(phone_numbers_to_unsubscribe, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)

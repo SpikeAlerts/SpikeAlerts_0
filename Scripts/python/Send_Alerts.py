@@ -252,10 +252,6 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         record_ids_to_unsubscribe = list(np.array(record_ids)[unsubscribed_indices])
         Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
         
-        # Delete from Twilio - See twilio_functions.py
-        phone_numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
-        delete_twilio_info(phone_numbers_to_unsubscribe, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        
         # pop() unsubscriptions from numbers/record_ids/messages list
         
         for unsubscribed_index in unsubscribed_indices:
