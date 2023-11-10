@@ -185,7 +185,7 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
         
         ### Get Flagged Sensors
             
-        flagged_df = sensors_df[~sensors_df.sensor_index.isin(clean_df.sensor_index)]
+        flagged_df = sensors_df[flags].copy()
 
         flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
 
