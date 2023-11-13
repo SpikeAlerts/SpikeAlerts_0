@@ -287,6 +287,10 @@ while True:
 
     time.sleep(sleep_seconds) # Sleep
 
+# ~~~~~~~~~~~~~~~~~~~~~
+
+# Terminate Program
+
 send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
 print("Terminating Program")
