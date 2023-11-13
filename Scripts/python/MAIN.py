@@ -93,6 +93,10 @@ too_early_hr = 8 # 8am
 
 base_report_url = 'https://redcap.ahc.umn.edu/surveys/?s=LN3HHDCJXYCKFCLE'
 
+# Is Twilio number verified (can it send URLs)?
+
+verfied_number = False
+
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
 
@@ -184,7 +188,7 @@ while True:
                     
                     # Add to message/record_id storage for future messaging
                     record_ids_to_text += record_ids_new_alerts
-                    messages += [new_alert_message(row.sensor_index, verfied_number = False)]*len(record_ids_new_alerts) # in Compose_Messages.py
+                    messages += [new_alert_message(row.sensor_index, verfied_number)]*len(record_ids_new_alerts) # in Compose_Messages.py
                     
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
                 update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
@@ -248,7 +252,7 @@ while True:
                 # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                 
                 record_ids_to_text += [record_id]
-                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number = False)]
+                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)]
 
         # c) Clear the users' cached_alerts 
         
