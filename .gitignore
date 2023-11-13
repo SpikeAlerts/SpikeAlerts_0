@@ -7,3 +7,4 @@ Scripts/database/db_credentials.txt
 Scripts/database/*up.sql
 *.DS_Store
 *.cpython-310.pyc 
+Notebooks/1_Initialize_Database/City_Comparisons/*
