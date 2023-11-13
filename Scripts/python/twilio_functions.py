@@ -66,7 +66,7 @@ def check_unsubscriptions(numbers, account_sid, auth_token):
     return unsubscribed_indices
     
 def delete_twilio_info(numbers, account_sid, auth_token):
-    '''This function deletes texts from phone numbers in twilio
+    '''This function deletes texts to/from phone numbers in twilio
     '''
 
     # Set up Twilio Client
@@ -82,5 +82,11 @@ def delete_twilio_info(numbers, account_sid, auth_token):
         messages_from = client.messages.list(from_=number) # Check if the numbers have responded, messages_from is a list twilio objects
         
         for message in messages_from:
+        
+            message.delete()
+
+        messages_to = client.messages.list(to_=number) # Get all messages we have sent to this number, messages_to is a list twilio objects
+        
+        for message in messages_to:
         
             message.delete()
