@@ -1,0 +1,6 @@
+numpy
+pandas
+geopandas
+psycopg2-binary
+twilio
+python-dotenv

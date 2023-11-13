@@ -4,3 +4,8 @@ Notebooks/2_Alerts/Text_Alert_scratch.ipynb
 Scripts/database/db_credentials.txt
 */twilio.env
 *.env
+Scripts/database/*up.sql
+*.DS_Store
+*.cpython-310.pyc 
+Notebooks/1_Initialize_Database/City_Comparisons/*
+Scripts/python/test.txt
