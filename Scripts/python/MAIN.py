@@ -113,7 +113,7 @@ Spike Threshold = {spike_threshold}
 
 # Initialize next update time, storage for reports_for_day
 
-next_update_time = starttime.replace(hour=8, minute = 0) + dt.timedelta(days=1)
+next_update_time = starttime.replace(hour=8, minute = 0, second = 0) + dt.timedelta(days=1)
 reports_for_day = 0
 
 while True:
@@ -252,7 +252,7 @@ while True:
                 # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                 
                 record_ids_to_text += [record_id]
-                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)]
+                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)] # in Compose_messages.py
 
         # c) Clear the users' cached_alerts 
         
