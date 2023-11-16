@@ -138,7 +138,7 @@ while True:
         # If we haven't already updated the full sensor list today, let's do that
         
         last_PurpleAir_update = Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago') # See Daily_Updates.py        
-        if last_PurpleAir_update < next_update_time: # If haven't updated system in a day
+        if last_PurpleAir_update < next_update_time: # If haven't updated full system in a day
             # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
             du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
         
