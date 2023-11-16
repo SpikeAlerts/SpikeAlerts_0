@@ -230,17 +230,27 @@ def pg_post_init_sensor_data(cols_for_db, sorted_df):
   cur.close()
   conn.close()
 
+def db_need_init():
+  conn = psycopg2.connect(**pg_connection_dict)
+  cur = conn.cursor()
+  cur.execute('SELECT * FROM "Minneapolis Boundary"')
+  response = cur.fetchall()
+  cur.close()
+  conn.close()
+  
+  if len(response) > 0:
+    return False
+  else:
+    return True
+
 def db_init():
   # execute get boundary --> post values to database
   pg_post_boundaries(get_boundary_from_url())
-
   boundaries = pg_get_boundary() # get boundaries from db
-  print(boundaries)
   response = import_sensors_data(boundaries) # import sensors data from purpleair api
-  print(response)
   cols_for_db, sorted_df = format_sensor_data(response) # format sensors data. returns column names and formated geo dataframe
-  print(cols_for_db, sorted_df)
   pg_post_init_sensor_data(cols_for_db, sorted_df)
 
+db_need_init()
 def db_notinit():
    print("you're not init!")

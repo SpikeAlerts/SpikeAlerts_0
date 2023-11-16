@@ -280,7 +280,7 @@ def main_loop():
         # Send all messages
         
         if len(record_ids_to_text) > 0:
-        
+            
             # send_all_messages(record_ids_to_text, messages,
             #                   redCap_token_signUp,
             #                   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
