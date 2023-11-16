@@ -68,6 +68,18 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
     '''
     This is the full workflow for updating our sensor information in the database. 
     Please see Daily_Updates.py for specifics on the functions
+    
+    test with 
+    
+    UPDATE "PurpleAir Stations"
+    SET channel_state = 3, channel_flags = 4;
+
+    DELETE FROM "PurpleAir Stations"
+    WHERE sensor_index = 143634;
+
+    UPDATE "PurpleAir Stations"
+    SET name = 'wrong_name'
+    WHERE sensor_index = 143916;
     '''
     # Load information from our database
     sensors_df = Get_our_sensor_info(pg_connection_dict) # Get our sensor info
@@ -87,7 +99,7 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
                                  
     # Clean up datatypes
     merged['sensor_index'] = merged.sensor_index.astype(int)
-    merged['channel_state'] = merged.channel_state.astype(int)
+    merged['channel_state'] = merged.channel_state.astype("Int64")
     
     # Do the names match up?
     names_match = (merged.name_SpikeAlerts == merged.name_PurpleAir)
@@ -122,7 +134,7 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
         ### Conditions
         name_controversy = (~no_name_PurpleAir & ~is_new_name) # Not new and not no name from PurpleAir
         # The dataframe under these conditions
-        name_controversy_df = diffName_df[name_controversy] # Has a different name!
+        name_controversy_df = diffName_df[name_controversy].copy() # Has a different name!
         if len(name_controversy_df.sensor_index) > 0:
             Update_name(name_controversy_df, pg_connection_dict)
             
@@ -430,7 +442,7 @@ def Flag_channel_state(sensor_indices, pg_connection_dict):
     '''
     To be used on sensors that haven't been seen in a while...
     
-    Sets all channel_states to zero for the sensor_indices (a list of sensor_index/integers) in "PurpleAir Stations"
+    Sets all channel_states to zero and channel_flags to 3 for the sensor_indices (a list of sensor_index/integers) in "PurpleAir Stations"
     '''
     
     conn = psycopg2.connect(**pg_connection_dict)
@@ -439,7 +451,7 @@ def Flag_channel_state(sensor_indices, pg_connection_dict):
     cur = conn.cursor()
     
     cmd = sql.SQL('''UPDATE "PurpleAir Stations"
-SET channel_state = 0
+SET channel_state = 0, channel_flags = 3
 WHERE sensor_index = ANY ( {} );
     ''').format(sql.Literal(sensor_indices))
     
