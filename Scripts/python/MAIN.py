@@ -95,7 +95,7 @@ base_report_url = 'https://redcap.ahc.umn.edu/surveys/?s=LN3HHDCJXYCKFCLE'
 
 # Is Twilio number verified (can it send URLs)?
 
-verfied_number = False
+verfied_number = True
 
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
@@ -133,7 +133,7 @@ while True:
         reports_for_day = 0
         
         # Reset Sensor Flags
-        Refresh_SensorFlags(pg_connection_dict)
+        # Refresh_SensorFlags(pg_connection_dict)
         
         # Get next update time (in 1 day)
         next_update_time = next_update_time + dt.timedelta(days=1)
