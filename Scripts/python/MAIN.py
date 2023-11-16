@@ -137,11 +137,12 @@ while True:
         messages_sent_today = 0
         
         # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
+        # Maybe comment out?
         du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
         
         # Update "Sign Up Information" from REDCap - See Daily_Updates.py
-        max_record_id = du.Get_newest_user(pg_connection_dict)
-        du.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
+        # max_record_id = du.Get_newest_user(pg_connection_dict)
+        # du.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
         
         print(reports_for_day, 'reports today')
         print(messages_sent_today, 'messages sent today')
