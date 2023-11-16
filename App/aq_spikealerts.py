@@ -5,6 +5,7 @@ import sys
 from dotenv import load_dotenv # Loading .env info
 from flask import Flask 
 from modules.db_init import db_notinit
+from modules.MAIN import main_loop
 
 
 ## variables
@@ -18,6 +19,7 @@ FLASK_PORT=os.getenv('FLASK_PORT')
 ## server
 
 print("name is", __name__, FLASK_PORT)
+main_loop()
 
 @app.route("/")
 def hello_world():
