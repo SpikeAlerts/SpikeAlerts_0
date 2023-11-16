@@ -19,7 +19,7 @@ import pandas as pd
 # Load our functions
 
 # import Get_spikes_df as get_spikes
-exec(open('Get_spikes_df.py').read())
+exec(open('Scripts/python/Get_spikes_df.py').read())
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
