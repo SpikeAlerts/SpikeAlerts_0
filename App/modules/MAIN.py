@@ -61,9 +61,9 @@ purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN') # PurpleAir API Read Key
 # redCap_token_signUp = os.getenv('REDCAP_TOKEN_SIGNUP') # Survey Token
 # redCap_token_report = os.getenv('REDCAP_TOKEN_REPORT') # Report Token
 
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_NUMBER = os.getenv('TWILIO_NUMBER')
+# TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
+# TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+# TWILIO_NUMBER = os.getenv('TWILIO_NUMBER')
 
 # Database credentials
 

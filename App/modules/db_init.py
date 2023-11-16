@@ -38,7 +38,7 @@ pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], cr
 
 # Load our Functions
 
-script_path = os.path.join('Scripts', 'python')
+script_path = os.path.join('App','modules')
 
 # Function definition - Please see Scripts/python/*
 exec(open(os.path.join(script_path, 'Get_spikes_df.py')).read())
