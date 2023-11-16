@@ -4,6 +4,7 @@
 
 import os # For working with Operating System
 import requests # Accessing the Web
+from io import StringIO
 import datetime as dt # Working with dates/times
 
 # Database 
@@ -21,11 +22,47 @@ import pandas as pd
 # import Get_spikes_df as get_spikes
 exec(open('Get_spikes_df.py').read())
 
+# If in notebooks... 
+# exec(open(os.path.join(script_path, 'Get_spikes_df.py')).read())
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # PurpleAir Stations
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
+
+def Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago'):
+    '''
+    This function gets the highest last_seen (only updated daily)
+    
+    returns timezone aware datetime
+    '''
+    # Connect
+    conn = psycopg2.connect(**pg_connection_dict) 
+    # Create cursor
+    cur = conn.cursor()
+
+    cmd = sql.SQL('''SELECT MAX(last_seen)
+    FROM "PurpleAir Stations";
+    ''')
+
+    cur.execute(cmd) # Execute
+    conn.commit() # Committ command
+
+    # Unpack response into timezone aware datetime
+
+    time = cur.fetchall()[0][0].replace(tzinfo=pytz.timezone(timezone))
+
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
+    
+    return time
+    
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
 
 def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
     '''
@@ -593,7 +630,7 @@ def Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_
         # Create cursor
         cur = conn.cursor()
 
-        for i, row in final_df.iterrows():
+        for i, row in focus_df.iterrows():
 
             q1 = sql.SQL('INSERT INTO "Sign Up Information" ({}) VALUES ({},{});').format(
              sql.SQL(', ').join(map(sql.Identifier, cols_for_db)),
@@ -610,19 +647,15 @@ def Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_
         # Commit commands
         conn.commit()
 
-        # Unpack response into pandas series
-
-        max_record_id = cur.fetchall()[0][0]
-
         # Close cursor
         cur.close()
         # Close connection
         conn.close()
 
-        print(len(final_df), ' new users')
+        print(len(focus_df), ' new users')
         
     else:
-        print('No new users')
+        print('0 new users')
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

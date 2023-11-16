@@ -113,7 +113,7 @@ Spike Threshold = {spike_threshold}
 
 ''')
 
-# Initialize next update time (8am today), storage for reports_for_day
+# Initialize next update time (8am today) & storage for daily metrics
 
 next_update_time = starttime.replace(hour=8, minute = 0, second = 0)
 reports_for_day = 0
@@ -130,14 +130,17 @@ while True:
    
    # ~~~~~~~~~~~~~~~~~~~~~
    
-    if now > next_update_time: # NOT DONE
+   # Daily Updates
+   
+    if now > next_update_time:
     
-        # Initialize reports_for_day, messages_sent_today
-        reports_for_day = 0
-        messages_sent_today = 0
+        # PurpleAir
+        # If we haven't already updated the full sensor list today, let's do that
         
-        # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
-        du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
+        last_PurpleAir_update = Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago') # See Daily_Updates.py        
+        if last_PurpleAir_update < next_update_time: # If haven't updated system in a day
+            # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
+            du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
         
         # Update "Sign Up Information" from REDCap - See Daily_Updates.py
         max_record_id = du.Get_newest_user(pg_connection_dict)
@@ -145,6 +148,10 @@ while True:
         
         print(reports_for_day, 'reports today')
         print(messages_sent_today, 'messages sent today')
+        
+        # Initialize storage for daily metrics
+        reports_for_day = 0
+        messages_sent_today = 0
         
         # Get next update time (in 1 day)
         next_update_time = next_update_time + dt.timedelta(days=1)
