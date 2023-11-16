@@ -264,10 +264,10 @@ while True:
     
     if len(record_ids_to_text) > 0:
     
-        send_all_messages(record_ids_to_text, messages,
-                          redCap_token_signUp,
-                          TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
-                          pg_connection_dict) # in Send_Alerts.py & .ipynb
+        # send_all_messages(record_ids_to_text, messages,
+        #                   redCap_token_signUp,
+        #                   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
+        #                   pg_connection_dict) # in Send_Alerts.py & .ipynb
         
         # Save them locally - for developers
         
