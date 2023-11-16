@@ -119,11 +119,13 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
 
         for i, condition in enumerate(conditions):
 
-            con_df = new_issue_df[new_issue_df.channel_flags_PurpleAir == i]
-
             if i == 0: # Only "serious" wifi issue if longer than 6 hours
 
-                con_df = con_df[(con_df.last_seen_PurpleAir < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(hours = 6))]
+                con_df = new_issue_df[(new_issue_df.channel_flags_PurpleAir == i
+                                        ) & (new_issue_df.last_seen_PurpleAir < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(hours = 6))]
+            
+            else:  
+                con_df = new_issue_df[new_issue_df.channel_flags_PurpleAir == i]
 
             for i, row in con_df.iterrows():
 
