@@ -38,7 +38,9 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
-## Load Functions
+## Load our Functions
+
+import Daily_Updates as du #
 
 # Please see Scripts/python/*
 exec(open('Get_spikes_df.py').read())
@@ -111,10 +113,11 @@ Spike Threshold = {spike_threshold}
 
 ''')
 
-# Initialize next update time, storage for reports_for_day
+# Initialize next update time (8am today), storage for reports_for_day
 
-next_update_time = starttime.replace(hour=8, minute = 0, second = 0) + dt.timedelta(days=1)
+next_update_time = starttime.replace(hour=8, minute = 0, second = 0)
 reports_for_day = 0
+messages_sent_today = 0
 
 while True:
 
@@ -129,11 +132,19 @@ while True:
    
     if now > next_update_time: # NOT DONE
     
-        # Initialize reports_for_day
+        # Initialize reports_for_day, messages_sent_today
         reports_for_day = 0
+        messages_sent_today = 0
         
-        # Reset Sensor Flags
-        # Refresh_SensorFlags(pg_connection_dict)
+        # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
+        du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
+        
+        # Update "Sign Up Information" from REDCap - See Daily_Updates.py
+        max_record_id = du.Get_newest_user(pg_connection_dict)
+        du.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
+        
+        print(reports_for_day, 'reports today')
+        print(messages_sent_today, 'messages sent today')
         
         # Get next update time (in 1 day)
         next_update_time = next_update_time + dt.timedelta(days=1)
@@ -276,6 +287,8 @@ while True:
             line = f'\n\n{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
             f.write(line)
         f.close()
+        
+        messages_sent_today += len(record_ids_to_text) # Not quite right. Overcounts for unsubscribed numbers
     
     # ~~~~~~~~~~~~~~~~~~~~~
 
@@ -283,7 +296,7 @@ while True:
 
     when_to_awake = now + dt.timedelta(minutes=timestep) 
 
-    sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything
+    sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything without texting... I think?
 
     time.sleep(sleep_seconds) # Sleep
 

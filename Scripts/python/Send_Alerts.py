@@ -248,9 +248,12 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     
     if len(unsubscribed_indices) > 0:
     
-        # Unsubscribe from our database - see Daily_Updates.py
+        # Unsubscribe from our database - see Send_Alerts.py
         record_ids_to_unsubscribe = list(np.array(record_ids)[unsubscribed_indices])
         Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
+        # Delete Twilio Information - see twilio_functions.py
+        numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
+        delete_twilio_info(numbers_to_unsubscribe, account_sid, auth_token)
         
         # pop() unsubscriptions from numbers/record_ids/messages list
         
@@ -385,3 +388,31 @@ def update_user_table(record_ids, times, pg_connection_dict):
     cur.close()
     conn.close()
     return
+    
+# ~~~~~~~~~~~~~
+    
+def Unsubscribe_users(record_ids, pg_connection_dict):
+    '''
+    Change record_ids to subscribed = FALSE in our database <- checked before every message, not daily... 
+    '''
+    
+    # Our Database
+    
+    conn = psycopg2.connect(**pg_connection_dict)
+    
+    # Create json cursor
+    cur = conn.cursor()
+    
+    cmd = sql.SQL('''UPDATE "Sign Up Information"
+    SET subscribed = FALSE
+WHERE record_id = ANY ( {} );
+    ''').format(sql.Literal(record_ids))
+    
+    cur.execute(cmd) # Execute
+    
+    conn.commit() # Committ command
+    
+    # Close cursor
+    cur.close()
+    # Close connection
+    conn.close()
