@@ -63,7 +63,7 @@ def flag_sensors(sensor_indices, pg_connection_dict):
     cur = conn.cursor()
 
     cmd = sql.SQL('''UPDATE "PurpleAir Stations"
-    SET channel_flags = 4
+    SET channel_flags = 4, last_seen = CURRENT_TIMESTAMP AT TIME ZONE 'America/Chicago'
     WHERE sensor_index = ANY ( {} );
     ''').format(sql.Literal(sensor_indices))
 
