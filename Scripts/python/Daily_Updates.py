@@ -5,7 +5,12 @@
 import os # For working with Operating System
 import requests # Accessing the Web
 from io import StringIO
+
+# Time
+
 import datetime as dt # Working with dates/times
+import pytz # Timezones
+import time # For Sleeping
 
 # Database 
 
@@ -19,8 +24,7 @@ import pandas as pd
 
 # Load our functions
 
-# import Get_spikes_df as get_spikes
-exec(open('Get_spikes_df.py').read())
+import Get_spikes_df
 
 # If in notebooks... 
 # exec(open(os.path.join(script_path, 'Get_spikes_df.py')).read())
@@ -316,7 +320,7 @@ def Get_PurpleAir(nwlng, selat, selng, nwlat, purpleAir_api):
     # Finalizing query for API function
     query_string = '&'.join([fields_string, bounds_string])
     
-    response = getSensorsData(query_string, purpleAir_api) # See Get_spikes_df.py
+    response = Get_spikes_df.getSensorsData(query_string, purpleAir_api) # See Get_spikes_df.py
     
     # Unpack response as a dataframe
     response_dict = response.json() # Read response as a json (dictionary)
@@ -357,7 +361,7 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
     sensor_string = 'show_only=' + '%2C'.join([str(sensor_index) for sensor_index in sensor_indices]) 
     query_string = '&'.join([fields_string, sensor_string])
     
-    response = getSensorsData(query_string, purpleAir_api)
+    response = Get_spikes_df.getSensorsData(query_string, purpleAir_api)
 
     # Unpack response
     response_dict = response.json() # Read response as a json (dictionary)

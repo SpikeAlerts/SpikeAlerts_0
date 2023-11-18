@@ -33,7 +33,7 @@ def get_sensor_ids(pg_connection_dict):
 
     cmd = sql.SQL('''SELECT sensor_index 
     FROM "PurpleAir Stations"
-    WHERE channel_flags = ANY (ARRAY[0,4]) AND channel_state = 3; -- channel_flags are updated regularly, channel_state <- managed by someone - 3 = on, 0 = off
+    WHERE channel_flags = ANY (ARRAY[0,4]) AND channel_state = 3; -- channel_flags are updated daily, channel_state <- managed by someone - 3 = on, 0 = off
     ''')
 
     cur.execute(cmd) # Execute
@@ -188,9 +188,5 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold):
         flagged_df = sensors_df[flags].copy()
 
         flagged_sensor_ids = flagged_df.reset_index(drop=True).sensor_index
-
-        # Flag them in our database
-
-        flag_sensors(flagged_sensor_ids.to_list(), pg_connection_dict)
     
     return spikes_df, runtime, flagged_sensor_ids

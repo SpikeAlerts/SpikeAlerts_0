@@ -27,6 +27,10 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 
+# Our functions
+
+import twilio_functions as our_twilio 
+
 load_dotenv()
 
 creds = [os.getenv('DB_NAME'),
@@ -245,7 +249,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     
     # Check Unsubscriptions
     
-    unsubscribed_indices = check_unsubscriptions(numbers, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) # See twilio_functions.py
+    unsubscribed_indices = our_twilio.check_unsubscriptions(numbers, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) # See twilio_functions.py
     
     if len(unsubscribed_indices) > 0:
     
@@ -254,7 +258,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
         # Delete Twilio Information - see twilio_functions.py
         numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
-        delete_twilio_info(numbers_to_unsubscribe, account_sid, auth_token)
+        our_twilio.delete_twilio_info(numbers_to_unsubscribe, account_sid, auth_token)
         
         # pop() unsubscriptions from numbers/record_ids/messages list
         
@@ -266,7 +270,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         
     # Send messages
     
-    times = send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
+    times = our_twilio.send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
     
     # This didn't work with my version yet, leaving for future reference
     #times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
