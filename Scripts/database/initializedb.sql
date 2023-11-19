@@ -47,12 +47,10 @@ CREATE table "Archived Alerts Acute PurpleAir" -- Archive of the Above table
 CREATE TABLE "PurpleAir Stations" -- See PurpleAir API - https://api.purpleair.com/
 (
 	sensor_index int,
-	firmware_version varchar(30),
 	date_created timestamp,
-	last_modified timestamp, 
 	last_seen timestamp,
+	last_elevated timestamp DEFAULT TIMESTAMP '2000-01-01 00:00:00',
 	"name" varchar(100),
-	uptime int,
 	position_rating int,
 	channel_state int,
 	channel_flags int,

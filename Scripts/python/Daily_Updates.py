@@ -351,7 +351,7 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
     '''
     
     #Setting parameters for API
-    fields = ['firmware_version','date_created','last_modified','last_seen', 'name', 'uptime','position_rating','channel_state','channel_flags','altitude',
+    fields = ['date_created', 'last_seen', 'name', 'position_rating','channel_state','channel_flags','altitude',
                   'latitude', 'longitude']                  
     fields_string = 'fields=' + '%2C'.join(fields) 
     sensor_string = 'show_only=' + '%2C'.join([str(sensor_index) for sensor_index in sensor_indices]) 
@@ -366,11 +366,8 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
 
     df = pd.DataFrame(data, columns = col_names)
 
-    # Correct Last Seen/modified/date created into datetimes (in UTC UNIX time)
+    # Correct Last Seen/date created into datetimes (in UTC UNIX time)
 
-    df['last_modified'] = pd.to_datetime(df['last_modified'].astype(int),
-                                                 utc = True,
-                                                 unit='s').dt.tz_convert('America/Chicago')
     df['date_created'] = pd.to_datetime(df['date_created'].astype(int),
                                              utc = True,
                                              unit='s').dt.tz_convert('America/Chicago')
@@ -391,8 +388,8 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
                                     crs = 'EPSG:4326')
                                )
     
-    cols_for_db = ['sensor_index', 'firmware_version', 'date_created', 'last_modified', 'last_seen',
-     'name', 'uptime', 'position_rating', 'channel_state', 'channel_flags', 'altitude', 'geometry'] 
+    cols_for_db = ['sensor_index', 'date_created', 'last_seen',
+     'name', 'position_rating', 'channel_state', 'channel_flags', 'altitude', 'geometry'] 
     
     # Get values ready for database
 
@@ -405,7 +402,6 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
     # Format the times
     
     sorted_df['date_created'] = gdf.date_created.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
-    sorted_df['last_modified'] = gdf.last_modified.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
     sorted_df['last_seen'] = gdf.last_seen.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
 
     # Connect to PostGIS Database
