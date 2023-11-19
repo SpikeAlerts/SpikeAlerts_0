@@ -16,7 +16,7 @@ Air quality is unhealthy in your area'''
     
     # URLs cannot be sent until phone number is verified
     if verfied_number:
-        message = message + '''
+        message = message + f'''
 https://map.purpleair.com/?select={sensor_index}/44.9723/-93.2447'''
     else:
         message = message + '''

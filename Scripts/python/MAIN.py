@@ -85,8 +85,8 @@ starttime = dt.datetime.now(pytz.timezone('America/Chicago'))
 stoptime = starttime + dt.timedelta(days=days_to_run)
 
 # Waking hours
-too_late_hr = 21 # 9pm
-too_early_hr = 8 # 8am
+too_late_hr = 25 # 9pm
+too_early_hr = -1 # 8am
 
 # Report URL
 
@@ -117,6 +117,7 @@ reports_for_day = 0
 messages_sent_today = 0
 
 while True:
+#    try:
 
     now = dt.datetime.now(pytz.timezone('America/Chicago')) # The current time
 
@@ -307,11 +308,23 @@ while True:
     sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything without texting... I think?
 
     time.sleep(sleep_seconds) # Sleep
-
+        
+#   except Exception as e:
+#       our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['SpikeAlerts Down'], redCap_token_signUp,
+#                             TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+#       print(e)
+#       answer = input('\n\nWhat would you like to do?')
+#       if answer == 'continue':
+#           pass
+#       else:
+#           print(reports_for_day, 'reports so far today')
+#           print(messages_sent_today, 'messages so far today')
+#           break
+       
 # ~~~~~~~~~~~~~~~~~~~~~
 
 # Terminate Program
 
-Send_Alerts.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
 print("Terminating Program")

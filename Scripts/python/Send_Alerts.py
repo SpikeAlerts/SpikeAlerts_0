@@ -163,6 +163,8 @@ def initialize_report(record_id, reports_for_day, pg_connection_dict):
     
     # Create Report_id
     
+    now = dt.datetime.now(pytz.timezone('America/Chicago'))
+    
     report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
     
     # Create Cursor for commands
