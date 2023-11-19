@@ -2,7 +2,6 @@
 
 # File manipulation
 
-import os # For working with Operating System
 import requests # Accessing the Web
 from io import StringIO
 
@@ -10,7 +9,6 @@ from io import StringIO
 
 import datetime as dt # Working with dates/times
 import pytz # Timezones
-import time # For Sleeping
 
 # Database 
 
@@ -25,9 +23,6 @@ import pandas as pd
 # Load our functions
 
 import Get_spikes_df
-
-# If in notebooks... 
-# exec(open(os.path.join(script_path, 'Get_spikes_df.py')).read())
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -58,14 +53,14 @@ def Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago'):
 
     # Unpack response into timezone aware datetime
 
-    time = cur.fetchall()[0][0].replace(tzinfo=pytz.timezone(timezone))
+    max_last_seen = cur.fetchall()[0][0].replace(tzinfo=pytz.timezone(timezone))
 
     # Close cursor
     cur.close()
     # Close connection
     conn.close()
     
-    return time
+    return max_last_seen
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
 

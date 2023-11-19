@@ -3,7 +3,7 @@
 # File Manipulation
 
 import os # For working with Operating System
-import sys # System arguments
+#import sys # System arguments
 from io import StringIO
 from dotenv import load_dotenv # Loading .env info
 
@@ -24,7 +24,6 @@ from psycopg2 import sql
 # Data Manipulation
 
 import numpy as np
-import geopandas as gpd
 import pandas as pd
 
 # Our functions
@@ -271,9 +270,6 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     # Send messages
     
     times = our_twilio.send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
-    
-    # This didn't work with my version yet, leaving for future reference
-    #times = twilio_functions.send_texts(numbers, messages) # this will send all the texts
     
     update_user_table(record_ids, times, pg_connection_dict) # See Send_Alerts.py
 

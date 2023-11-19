@@ -1,11 +1,5 @@
 ### Import Packages
 
-# File manipulation
-
-import os # For working with Operating System
-import requests # Accessing the Web
-import datetime as dt # Working with dates/times
-
 # Database 
 
 import psycopg2
@@ -13,7 +7,6 @@ from psycopg2 import sql
 
 # Analysis
 
-import numpy as np
 import pandas as pd
 
 def get_active_alerts(pg_connection_dict):

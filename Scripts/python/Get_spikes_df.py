@@ -2,7 +2,6 @@
 
 # File manipulation
 
-import os # For working with Operating System
 import requests # Accessing the Web
 import datetime as dt # Working with dates/times
 import pytz # Timezones
@@ -15,7 +14,6 @@ from psycopg2 import sql
 # Analysis
 
 import numpy as np
-import geopandas as gpd
 import pandas as pd
 
 ### Function to get the sensor_ids from our database
