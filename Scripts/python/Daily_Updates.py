@@ -19,6 +19,7 @@ from psycopg2 import sql
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 
 # Load our functions
 
