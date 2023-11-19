@@ -7,6 +7,9 @@ import os
 from twilio.rest import Client
 # Getting .env information
 from dotenv import load_dotenv
+import time # Sleeping
+import pytz # Timezones
+import numpy as np
 
 load_dotenv()
 

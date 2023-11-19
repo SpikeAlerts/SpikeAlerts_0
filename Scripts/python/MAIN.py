@@ -40,15 +40,12 @@ import pandas as pd
 
 ## Load our Functions
 
-import Daily_Updates as du #
-
-# Please see Scripts/python/*
-exec(open('Get_spikes_df.py').read())
-exec(open('Create_messages.py').read())
-exec(open('twilio_functions.py').read())
-exec(open('Update_Alerts.py').read())
-exec(open('Send_Alerts.py').read())
-exec(open('Daily_Updates.py').read())
+import Get_spikes_df
+import Create_messages
+import twilio_functions as our_twilio
+import Update_Alerts
+import Send_Alerts
+import Daily_Updates
 
 ## Global Variables
 
@@ -137,17 +134,17 @@ while True:
         # PurpleAir
         # If we haven't already updated the full sensor list today, let's do that
         
-        last_PurpleAir_update = Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago') # See Daily_Updates.py        
-        if last_PurpleAir_update < next_update_time: # If haven't updated full system in a day
+        last_PurpleAir_update = Daily_Updates.Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago') # See Daily_Updates.py        
+        if last_PurpleAir_update < next_update_time: # If haven't updated full system today
             # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
-            du.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
+            Daily_Updates.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
         
         # Update "Sign Up Information" from REDCap - See Daily_Updates.py
-        max_record_id = du.Get_newest_user(pg_connection_dict)
-        du.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
+        max_record_id = Daily_Updates.Get_newest_user(pg_connection_dict)
+        Daily_Updates.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
         
-        print(reports_for_day, 'reports today')
-        print(messages_sent_today, 'messages sent today')
+        print(reports_for_day, 'reports yesterday')
+        print(messages_sent_today, 'messages sent yesterday')
         
         # Initialize storage for daily metrics
         reports_for_day = 0
@@ -160,15 +157,19 @@ while True:
    
     #  Get the sensor_ids from sensors in our database that are not flagged
 
-    sensor_ids = get_sensor_ids(pg_connection_dict) # In Get_Spikes_df.py
+    sensor_ids = Get_spikes_df.get_sensor_ids(pg_connection_dict) # In Get_Spikes_df.py
 
     # Query PurpleAir for Spikes
 
-    spikes_df, runtime, flagged_sensor_ids = Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold) # In Get_Spikes_df.py
+    spikes_df, runtime, flagged_sensor_ids = Get_spikes_df.Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold) # In Get_Spikes_df.py
+    
+    # Flag sensors in our database
+
+    Get_spikes_df.flag_sensors(flagged_sensor_ids.to_list(), pg_connection_dict)
 
     # Sort the spiked sensors into new, ongoing, ended spiked sensors, and not spiked sensors
 
-    new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = sort_sensors_for_updates(spikes_df, sensor_ids, flagged_sensor_ids, pg_connection_dict) # In Update_Alerts.py
+    new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = Update_Alerts.sort_sensors_for_updates(spikes_df, sensor_ids, flagged_sensor_ids, pg_connection_dict) # In Update_Alerts.py
 
     # Initialize message/record_id storage
     
@@ -187,29 +188,29 @@ while True:
     
             # 1) Add to active alerts
         
-            newest_alert_index = add_to_active_alerts(row, pg_connection_dict,
+            newest_alert_index = Update_Alerts.add_to_active_alerts(row, pg_connection_dict,
                                  runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
                                 ) # In Update_Alerts.py
             
             # 2) Query users ST_Dwithin 1000 meters & subscribed = TRUE
             
-            record_ids_nearby = Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # in Send_Alerts.py
+            record_ids_nearby = Send_Alerts.Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # in Send_Alerts.py
             
             if len(record_ids_nearby) > 0:
 
                 if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking Hours
             
                     # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
-                    record_ids_new_alerts = Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
+                    record_ids_new_alerts = Send_Alerts.Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
                     
                     # Compose Messages & concat to messages/record_id_to_text   
                     
                     # Add to message/record_id storage for future messaging
                     record_ids_to_text += record_ids_new_alerts
-                    messages += [new_alert_message(row.sensor_index, verfied_number)]*len(record_ids_new_alerts) # in Compose_Messages.py
+                    messages += [Create_messages.new_alert_message(row.sensor_index, verfied_number)]*len(record_ids_new_alerts) # in Create_Messages.py
                     
                 # b) Add newest_alert_index to record_ids_nearby's Active Alerts
-                update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
+                Update_Alerts.update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
                  
     # ~~~~~~~~~~~~~~~~~~~~~
 
@@ -223,7 +224,7 @@ while True:
 
             # 1) Update the maximum reading
     
-            update_max_reading(spike, pg_connection_dict) # In Update_Alerts.py
+            Update_Alerts.update_max_reading(spike, pg_connection_dict) # In Update_Alerts.py
             
             # 2) Merge/Cluster alerts? 
             # NOT DONE - FAR FUTURE TO DO
@@ -236,22 +237,22 @@ while True:
 
         # 1) Add alert to archive
     
-        add_to_archived_alerts(not_spiked_sensors, pg_connection_dict) # In Update_Alerts.py
+        Update_Alerts.add_to_archived_alerts(not_spiked_sensors, pg_connection_dict) # In Update_Alerts.py
 
         # 2) Remove from Active Alerts
         
-        ended_alert_indices = remove_active_alerts(not_spiked_sensors, pg_connection_dict) # # A list from Update_Alerts.py
+        ended_alert_indices = Update_Alerts.remove_active_alerts(not_spiked_sensors, pg_connection_dict) # # A list from Update_Alerts.py
 
         # 3) Transfer these alerts from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts 
         
-        cache_alerts(ended_alert_indices, pg_connection_dict) # in Update_Alerts.py & .ipynb
+        Update_Alerts.cache_alerts(ended_alert_indices, pg_connection_dict) # in Update_Alerts.py & .ipynb
         
     else:
         ended_alert_indices = []
         
     # 4) Query for people to text about ended alerts (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
         
-    record_ids_end_alert_message = Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
+    record_ids_end_alert_message = Send_Alerts.Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
             
     # 5) If #4 has elements: for each element (user) in #4
     
@@ -261,7 +262,7 @@ while True:
             
             # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
                 
-            duration_minutes, max_reading, report_id = initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
+            duration_minutes, max_reading, report_id = Send_Alerts.initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
             
             reports_for_day += 1 
             
@@ -270,11 +271,11 @@ while True:
                 # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
                 
                 record_ids_to_text += [record_id]
-                messages += [end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)] # in Compose_messages.py
+                messages += [Create_messages.end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)] # in Create_messages.py
 
         # c) Clear the users' cached_alerts 
         
-        clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
+        Update_Alerts.clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     
@@ -282,7 +283,7 @@ while True:
     
     if len(record_ids_to_text) > 0:
     
-        send_all_messages(record_ids_to_text, messages,
+        Send_Alerts.send_all_messages(record_ids_to_text, messages,
                           redCap_token_signUp,
                           TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
                           pg_connection_dict) # in Send_Alerts.py & .ipynb
@@ -311,6 +312,6 @@ while True:
 
 # Terminate Program
 
-send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+Send_Alerts.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
 print("Terminating Program")
