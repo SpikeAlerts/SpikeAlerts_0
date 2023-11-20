@@ -118,13 +118,18 @@ messages_sent_today = 0
 
 while True:
 #    try:
-
     now = dt.datetime.now(pytz.timezone('America/Chicago')) # The current time
 
     print(now)
 
     if stoptime < now: # Check if we've hit stoptime
         break
+        
+    # Is is within waking hours? Can we text people?
+    if (now.hour < too_late_hr) & (now.hour > too_early_hr):
+        can_text = True
+    else:
+        can_text = False
    
    # ~~~~~~~~~~~~~~~~~~~~~
    
@@ -140,9 +145,9 @@ while True:
             # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
             Daily_Updates.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
         
-        # Update "Sign Up Information" from REDCap - See Daily_Updates.py
-        max_record_id = Daily_Updates.Get_newest_user(pg_connection_dict)
-        Daily_Updates.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
+            # Update "Sign Up Information" from REDCap - See Daily_Updates.py
+            max_record_id = Daily_Updates.Get_newest_user(pg_connection_dict)
+            Daily_Updates.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
         
         print(reports_for_day, 'reports yesterday')
         print(messages_sent_today, 'messages sent yesterday')
@@ -155,22 +160,11 @@ while True:
         next_update_time = next_update_time + dt.timedelta(days=1)
    
    # ~~~~~~~~~~~~~~~~~~~~~
-   
-    #  Get the sensor_ids from sensors in our database that are not flagged
 
-    sensor_ids = Get_spikes_df.get_sensor_ids(pg_connection_dict) # In Get_Spikes_df.py
+    # Query PurpleAir for Spikes and sort out if we have new, ongoing, ended, flagged, not spiked sensors
 
-    # Query PurpleAir for Spikes
+    spikes_df, purpleAir_runtime, sensors_dict = GetSort_Spikes.workflow(purpleAir_api, pg_connection_dict, spike_threshold)
 
-    spikes_df, runtime, flagged_sensor_ids = Get_spikes_df.Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold) # In Get_Spikes_df.py
-    
-    # Flag sensors in our database
-
-    Get_spikes_df.flag_sensors(flagged_sensor_ids.to_list(), pg_connection_dict)
-
-    # Sort the spiked sensors into new, ongoing, ended spiked sensors, and not spiked sensors
-
-    new_spike_sensors, ongoing_spike_sensors, ended_spike_sensors, not_spiked_sensors = Update_Alerts.sort_sensors_for_updates(spikes_df, sensor_ids, flagged_sensor_ids, pg_connection_dict) # In Update_Alerts.py
 
     # Initialize message/record_id storage
     
@@ -181,102 +175,34 @@ while True:
     
     # NEW Spikes
     
-    if len(new_spike_sensors) > 0:
+    if len(sensors_dict['new']) > 0:
 
-        new_spikes_df = spikes_df[spikes_df.sensor_index.isin(new_spike_sensors)] 
+        new_spikes_df = spikes_df[spikes_df.sensor_index.isin(sensors_dict['new'])] 
     
-        for index, row in new_spikes_df.iterrows():
-    
-            # 1) Add to active alerts
-        
-            newest_alert_index = Update_Alerts.add_to_active_alerts(row, pg_connection_dict,
-                                 runtime.strftime('%Y-%m-%d %H:%M:%S') # When we ran the PurpleAir Query
-                                ) # In Update_Alerts.py
-            
-            # 2) Query users ST_Dwithin 1000 meters & subscribed = TRUE
-            
-            record_ids_nearby = Send_Alerts.Users_nearby_sensor(pg_connection_dict, row.sensor_index, 1000) # in Send_Alerts.py
-            
-            if len(record_ids_nearby) > 0:
-
-                if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking Hours
-            
-                    # a) Query users from record_ids_nearby if both active_alerts and cached_alerts are empty
-                    record_ids_new_alerts = Send_Alerts.Users_to_message_new_alert(pg_connection_dict, record_ids_nearby) # in Send_Alerts.py & .ipynb 
-                    
-                    # Compose Messages & concat to messages/record_id_to_text   
-                    
-                    # Add to message/record_id storage for future messaging
-                    record_ids_to_text += record_ids_new_alerts
-                    messages += [Create_messages.new_alert_message(row.sensor_index, verfied_number)]*len(record_ids_new_alerts) # in Create_Messages.py
-                    
-                # b) Add newest_alert_index to record_ids_nearby's Active Alerts
-                Update_Alerts.update_users_active_alerts(record_ids_nearby, newest_alert_index, pg_connection_dict) # in Update_Alerts.py & .ipynb
+        New_Alerts.workflow(new_spikes_df, purpleAir_runtime, messages, record_ids_to_text, can_text, pg_connection_dict)
                  
     # ~~~~~~~~~~~~~~~~~~~~~
 
     # ONGOING spikes
 
-    if len(ongoing_spike_sensors) > 0:
+    if len(sensors_dict['ongoing']) > 0:
 
-        ongoing_spikes_df = spikes_df[spikes_df.sensor_index.isin(ongoing_spike_sensors)]
-
-        for _, spike in ongoing_spikes_df.iterrows():
-
-            # 1) Update the maximum reading
+        ongoing_spikes_df = spikes_df[spikes_df.sensor_index.isin(sensors_dict['ongoing'])]
+        
+        Ongoing_Alerts.workflow(ongoing_spikes_df, pg_connection_dict)
     
-            Update_Alerts.update_max_reading(spike, pg_connection_dict) # In Update_Alerts.py
-            
-            # 2) Merge/Cluster alerts? 
-            # NOT DONE - FAR FUTURE TO DO
-
-    # ~~~~~~~~~~~~~~~~~~~~~
-
+    # ~~~~~~~~~~~~~~~~~~~~~~~~
+    
     # ENDED spikes
 
-    if len(ended_spike_sensors) > 0:
-
-        # 1) Add alert to archive
-    
-        Update_Alerts.add_to_archived_alerts(not_spiked_sensors, pg_connection_dict) # In Update_Alerts.py
-
-        # 2) Remove from Active Alerts
-        
-        ended_alert_indices = Update_Alerts.remove_active_alerts(not_spiked_sensors, pg_connection_dict) # # A list from Update_Alerts.py
-
-        # 3) Transfer these alerts from "Sign Up Information" active_alerts to "Sign Up Information" cached_alerts 
-        
-        Update_Alerts.cache_alerts(ended_alert_indices, pg_connection_dict) # in Update_Alerts.py & .ipynb
-        
-    else:
-        ended_alert_indices = []
-        
-    # 4) Query for people to text about ended alerts (subscribed = TRUE and active_alerts is empty and cached_alerts not empty and cached_alerts is > 10 minutes old - ie. ended_alert_indices intersect cached_alerts is empty) 
-        
-    record_ids_end_alert_message = Send_Alerts.Users_to_message_end_alert(pg_connection_dict, ended_alert_indices) # in Send_Alerts.py & .ipynb
-            
-    # 5) If #4 has elements: for each element (user) in #4
-    
-    if len(record_ids_end_alert_message) > 0:
-    
-        for record_id in record_ids_end_alert_message:
-            
-            # a) Initialize report - generate unique report_id, log cached_alerts and use to find start_time/max reading/duration/sensor_indices
-                
-            duration_minutes, max_reading, report_id = Send_Alerts.initialize_report(record_id, reports_for_day, pg_connection_dict) # in Send_Alerts.py & .ipynb
-            
-            reports_for_day += 1 
-            
-            if (now.hour < too_late_hr) & (now.hour > too_early_hr): # Waking hours
-
-                # b) Compose message telling user it's over w/ unique report option & concat to messages/record_ids_to_text
-                
-                record_ids_to_text += [record_id]
-                messages += [Create_messages.end_alert_message(duration_minutes, max_reading, report_id, base_report_url, verfied_number)] # in Create_messages.py
-
-        # c) Clear the users' cached_alerts 
-        
-        Update_Alerts.clear_cached_alerts(record_ids_end_alert_message, pg_connection_dict) # in Update_Alerts.py & .ipynb
+    messages, record_ids_to_text, reports_for_day = Ended_Alerts.workflow(sensors_dict,
+                                                                         purpleAir_runtime,
+                                                                          messages,
+                                                                           record_ids_to_text,
+                                                                            reports_for_day,
+                                                                            base_report_url,
+                                                                            can_text,
+                                                                             pg_connection_dict)
                 
     # ~~~~~~~~~~~~~~~~~~~~~           
     
@@ -293,7 +219,7 @@ while True:
         
         f = open("test.txt", "a")
         for i in range(len(record_ids_to_text)):
-            line = f'\n\n{str(record_ids_to_text[i])} - {runtime}\n\n' + messages[i]
+            line = f'\n\n{str(record_ids_to_text[i])} - {purpleAir_runtime}\n\n' + messages[i]
             f.write(line)
         f.close()
         
@@ -309,22 +235,21 @@ while True:
 
     time.sleep(sleep_seconds) # Sleep
         
-#   except Exception as e:
-#       our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['SpikeAlerts Down'], redCap_token_signUp,
-#                             TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
-#       print(e)
-#       answer = input('\n\nWhat would you like to do?')
-#       if answer == 'continue':
-#           pass
-#       else:
-#           print(reports_for_day, 'reports so far today')
-#           print(messages_sent_today, 'messages so far today')
-#           break
+#    except Exception as e:
+#        our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['SpikeAlerts Down'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+#        print(e)
+#        answer = input('\n\nWhat would you like to do?')
+#        if answer == 'continue':
+#            pass
+#        else:
+#            print(reports_for_day, 'reports so far today')
+#            print(messages_sent_today, 'messages so far today')
+#            break
        
 # ~~~~~~~~~~~~~~~~~~~~~
 
 # Terminate Program
 
-our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+#our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
 print("Terminating Program")
