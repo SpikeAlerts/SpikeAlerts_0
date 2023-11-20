@@ -5,7 +5,135 @@
 from psycopg2 import sql
 import Basic_PSQL as psql
 import pandas as pd
+import pytz
+import datetime as dt
 
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Daily_Updates
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
+
+def Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago'):
+    '''
+    This function gets the highest last_seen (only updated daily)
+    
+    returns timezone aware datetime
+    '''
+
+    cmd = sql.SQL('''SELECT MAX(last_seen)
+    FROM "PurpleAir Stations"
+    WHERE channel_flags = 3;
+    ''')
+    
+    response = psql.get_response(cmd, pg_connection_dict)
+
+    # Unpack response into timezone aware datetime
+    
+    if response[0][0] != None:
+
+        max_last_seen = response[0][0].replace(tzinfo=pytz.timezone(timezone))
+    else:
+        max_last_seen = dt.datetime(2000, 1, 1).replace(tzinfo=pytz.timezone(timezone))
+    
+    return max_last_seen
+    
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def Get_our_sensor_info(pg_connection_dict):
+    '''
+    Gets all sensors from our database for a daily update check
+    
+    returns sensors_df 
+    
+    with columns sensor_index, last_seen, name, channel_flags, channel_state
+    types: int, datetime 'America/Chicago', str, int, int
+    '''
+
+    cmd = sql.SQL('''SELECT sensor_index, last_seen, name, channel_flags, channel_state
+    FROM "PurpleAir Stations";
+    ''')
+
+    response = psql.get_response(cmd, pg_connection_dict)
+
+    # Unpack response into pandas series
+
+    sensors_df = pd.DataFrame(response, columns = ['sensor_index', 'last_seen', 'name', 'channel_flags', 'channel_state'])
+
+    # Datatype corrections
+    sensors_df['sensor_index']  = sensors_df.sensor_index.astype(int)
+    sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'])
+    sensors_df['channel_flags'] = sensors_df.channel_flags.astype(int)
+    sensors_df['channel_state'] = sensors_df.channel_state.astype(int)
+    
+    return sensors_df
+    
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def Get_extent(pg_connection_dict): 
+    '''
+    Gets the bounding box of our project's extent + 100 meters ("Minneapolis Boundary")
+    
+    Specifically for PurpleAir api
+    
+    returns nwlng, selat, selng, nwlat AS strings
+    '''   
+    
+    # Query for bounding box of boundary buffered 100 meters
+
+    cmd = sql.SQL('''
+    WITH buffer as
+	    (
+	    SELECT ST_BUFFER(ST_Transform(ST_SetSRID(geometry, 4326),
+								      26915),
+					     100) geom -- buff the geometry by 100 meters
+	    FROM "Minneapolis Boundary"
+	    ), bbox as
+	    (
+	    SELECT ST_EXTENT(ST_Transform(geom, 4326)) b
+	    FROM buffer
+	    )
+    SELECT b::text
+    FROM bbox;
+    ''')
+
+    response = psql.get_response(cmd, pg_connection_dict)
+    
+    # Gives a string
+    # Unpack the response
+
+    num_string = response[0][0][4:-1]
+    
+    # That's in xmin ymin, xmax ymax
+    xmin = num_string.split(' ')[0]
+    ymin = num_string.split(' ')[1].split(',')[0]
+    xmax = num_string.split(' ')[1].split(',')[1]
+    ymax = num_string.split(' ')[2]
+    
+    # Convert into PurpleAir API notation
+    nwlng, selat, selng, nwlat = xmin, ymin, xmax, ymax
+    
+    return nwlng, selat, selng, nwlat
+    
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+def Get_newest_user(pg_connection_dict):
+    '''
+    This function gets the newest user's record_id
+    
+    returns an integer
+    '''
+
+    cmd = sql.SQL('''SELECT MAX(record_id)
+    FROM "Sign Up Information";
+    ''')
+
+    response = psql.get_response(cmd, pg_connection_dict)
+
+    max_record_id = response[0][0]
+    
+    return max_record_id
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -55,7 +183,7 @@ def Get_previous_active_sensors(pg_connection_dict):
     
     return active_alerts_df
 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~p.last_elevated + INTERVAL '30 Minutes' > CURRENT_TIMESTAMP AT TIME ZONE 'America/Chicago'
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def Get_not_elevated_sensors(pg_connection_dict, alert_lag=20):
     '''
@@ -74,8 +202,10 @@ def Get_not_elevated_sensors(pg_connection_dict, alert_lag=20):
     sensor_indices = [i[0] for i in response] # Unpack results into list
 
     return sensor_indices
-#~~~~~~~~~~~~~~~~~
-# New_Alerts
+    
+### ~~~~~~~~~~~~~~~~~
+
+##  New_Alerts
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -134,6 +264,10 @@ def Get_users_to_message_new_alert(pg_connection_dict, record_ids):
     return record_ids_to_text
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Ended Alerts
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def Get_users_to_message_end_alert(pg_connection_dict, ended_alert_indices):
     '''

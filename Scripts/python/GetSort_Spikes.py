@@ -80,7 +80,7 @@ def Get_spikes_df(purpleAir_api, sensor_ids, spike_threshold, timezone = 'Americ
     
     fields = ['pm2.5_10minute', 'channel_flags', 'last_seen']
 
-    sensors_df, runtime = purp.Get_PurpleAir_df(purpleAir_api, sensor_ids, fields)
+    sensors_df, runtime = purp.Get_PurpleAir_df_sensors(purpleAir_api, sensor_ids, fields)
         
     if len(sensors_df) > 0:
         # Correct last_seen
