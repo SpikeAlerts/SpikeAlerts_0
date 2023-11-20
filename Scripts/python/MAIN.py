@@ -131,9 +131,7 @@ while True:
         can_text = True
     else:
         can_text = False
-   
-   # ~~~~~~~~~~~~~~~~~~~~~
-   
+
    # ~~~~~~~~~~~~~~~~~~~~~
    
    # Daily Updates
@@ -226,7 +224,7 @@ while True:
 #    except Exception as e:
 #        our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['SpikeAlerts Down'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 #        print(e)
-#        answer = input('\n\nWhat would you like to do?')
+#        answer = input('\n\nWhat would you like to do? (type continue to resume)')
 #        if answer == 'continue':
 #            pass
 #        else:

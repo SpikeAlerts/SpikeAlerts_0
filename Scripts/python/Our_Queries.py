@@ -23,7 +23,7 @@ def Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago'):
 
     cmd = sql.SQL('''SELECT MAX(last_seen)
     FROM "PurpleAir Stations"
-    WHERE channel_flags = 3;
+    WHERE channel_flags = 0;
     ''')
     
     response = psql.get_response(cmd, pg_connection_dict)
