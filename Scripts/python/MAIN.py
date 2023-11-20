@@ -40,12 +40,13 @@ import pandas as pd
 
 ## Load our Functions
 
-import Get_spikes_df
-import Create_messages
-import twilio_functions as our_twilio
-import Update_Alerts
-import Send_Alerts
 import Daily_Updates
+import GetSort_Spikes
+import New_Alerts
+import Ongoing_Alerts
+import Ended_Alerts
+import Send_Alerts
+import Twilio_Functions as our_twilio
 
 ## Global Variables
 
@@ -94,7 +95,7 @@ base_report_url = 'https://redcap.ahc.umn.edu/surveys/?s=LN3HHDCJXYCKFCLE'
 
 # Is Twilio number verified (can it send URLs)?
 
-verfied_number = True
+verified_number = True
 
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
@@ -133,31 +134,18 @@ while True:
    
    # ~~~~~~~~~~~~~~~~~~~~~
    
+   # ~~~~~~~~~~~~~~~~~~~~~
+   
    # Daily Updates
    
     if now > next_update_time:
     
-        # PurpleAir
-        # If we haven't already updated the full sensor list today, let's do that
-        
-        last_PurpleAir_update = Daily_Updates.Get_last_PurpleAir_update(pg_connection_dict, timezone = 'America/Chicago') # See Daily_Updates.py        
-        if last_PurpleAir_update < next_update_time: # If haven't updated full system today
-            # Update "PurpleAir Stations" from PurpleAir - see Daily_Updates.py
-            Daily_Updates.Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
-        
-            # Update "Sign Up Information" from REDCap - See Daily_Updates.py
-            max_record_id = Daily_Updates.Get_newest_user(pg_connection_dict)
-            Daily_Updates.Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict)
-        
-        print(reports_for_day, 'reports yesterday')
-        print(messages_sent_today, 'messages sent yesterday')
-        
-        # Initialize storage for daily metrics
-        reports_for_day = 0
-        messages_sent_today = 0
-        
-        # Get next update time (in 1 day)
-        next_update_time = next_update_time + dt.timedelta(days=1)
+        next_update_time, reports_for_day, messages_sent_today = Daily_Updates.workflow(next_update_time,
+                                                                                        reports_for_day,
+                                                                                  messages_sent_today,
+                                                                                   purpleAir_api,
+                                                                                    redCap_token_signUp,
+                                                                                    pg_connection_dict)
    
    # ~~~~~~~~~~~~~~~~~~~~~
 

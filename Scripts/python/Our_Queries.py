@@ -171,7 +171,7 @@ def Get_previous_active_sensors(pg_connection_dict):
     '''
     
     cmd = sql.SQL('''SELECT sensor_indices 
-    FROM "Active Alerts Acute PurpleAir"
+    FROM "Active Alerts Acute PurpleAir";
     ''')
     
     response = psql.get_response(cmd, pg_connection_dict)   

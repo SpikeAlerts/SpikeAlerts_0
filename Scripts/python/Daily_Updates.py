@@ -46,15 +46,14 @@ def workflow(next_update_time, reports_for_day, messages_sent_today, purpleAir_a
     last_PurpleAir_update = query.Get_last_PurpleAir_update(pg_connection_dict, timezone = timezone) # See Daily_Updates.py      
       
     if last_PurpleAir_update < next_update_time: # If haven't updated full system today
-        pass
         # Update "PurpleAir Stations" from PurpleAir
-    Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
+        Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
     
     # Update "Sign Up Information" from REDCap - See Daily_Updates.py
-    #max_record_id = query.Get_newest_user(pg_connection_dict)
-    #REDCap_df = redcap.Get_new_users(max_record_id, redCap_token_signUp)
-    #Add_new_users(REDCap_df, pg_connection_dict)
-    #print(len(REDCap_df), ' new users')
+    max_record_id = query.Get_newest_user(pg_connection_dict)
+    REDCap_df = redcap.Get_new_users(max_record_id, redCap_token_signUp)
+    Add_new_users(REDCap_df, pg_connection_dict)
+    print(len(REDCap_df), 'new users')
     
     print(reports_for_day, 'reports yesterday')
     print(messages_sent_today, 'messages sent yesterday')
