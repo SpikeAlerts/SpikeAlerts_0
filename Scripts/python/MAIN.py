@@ -165,7 +165,7 @@ while True:
 
         new_spikes_df = spikes_df[spikes_df.sensor_index.isin(sensors_dict['new'])] 
     
-        New_Alerts.workflow(new_spikes_df, purpleAir_runtime, messages, record_ids_to_text, can_text, pg_connection_dict)
+        messages, record_ids_to_text = New_Alerts.workflow(new_spikes_df, purpleAir_runtime, messages, record_ids_to_text, can_text, pg_connection_dict)
                  
     # ~~~~~~~~~~~~~~~~~~~~~
 
