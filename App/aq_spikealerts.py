@@ -21,8 +21,8 @@ print("name is", __name__, FLASK_PORT)
 
 if db_need_init() == True:
   print("Minneapolis Boundaries table empty. running db init.")
-  # db_init()
-# main_loop()
+  db_init()
+main_loop()
 
 # main_loop()
 

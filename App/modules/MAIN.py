@@ -73,10 +73,10 @@ creds = [os.getenv('DB_NAME'),
          os.getenv('DB_USER'),
          os.getenv('DB_PASS'),
          os.getenv('DB_PORT'),
-         os.getenv('DB_HOST')
+         os.getenv('DB_HOST'),
+         "-c search_path=spikealerts"
         ]
-
-pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], creds))  
+pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host','options'], creds)) 
 
 ## Other Constants from System Arguments
 
