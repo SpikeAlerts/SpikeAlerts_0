@@ -40,7 +40,7 @@ import pandas as pd
 
 ## Load our Functions
 
-import modules.Daily_Updates as du #
+import App.modules.Daily_Updates as du #
 print(os.getcwd())
 
 script_path = os.path.join('App','modules')
