@@ -16,6 +16,7 @@ import psycopg2
 
 import pandas as pd
 import geopandas as gpd
+import numpy as np
 
 # Load our functions
 
@@ -103,7 +104,6 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
     merged_df['channel_flags_SpikeAlerts'] = merged_df.channel_flags_SpikeAlerts.astype("Int64")
     
     # Sort the sensors
-    
     sensors_dict = Sort_Sensors(merged_df) # A dictionary of lists of sensor_indices - categories/keys: 'Same Names', 'New', 'Expired', 'Conflicting Names', 'New Flags'
     
     if len(sensors_dict['New']): # Add new sensors to our database (another PurpleAir api call)
@@ -175,9 +175,9 @@ def Sort_Sensors(merged_df):
     # Does PurpleAir not have the name?
     no_name_PurpleAir = (merged_df.name_PurpleAir.isna())
     # We haven't seen recently? - within 30 days
-    not_seen_recently = (merged_df.last_seen_SpikeAlerts.dt.date <
-                            (dt.datetime.now(pytz.timezone('America/Chicago')
-                            ) - dt.timedelta(days = 30)).date())
+    not_seen_recently = (merged_df.last_seen_SpikeAlerts <
+                            np.datetime64((dt.datetime.now(pytz.timezone('America/Chicago')
+                            ) - dt.timedelta(days = 30))))
     # Good channel State
     good_channel_state = (merged_df.channel_state != 0)
     # New Flags (within past day) - a 4 in our database
