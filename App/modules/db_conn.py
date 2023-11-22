@@ -12,7 +12,7 @@ if os.getenv('DATABASE_URL'):
         parsed_url.hostname,
         os.getenv('DB_OPTIONS')
         ]
-  print(creds)
+  # print(creds)
   pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host', 'options'], creds))
 else:
   creds = [os.getenv('DB_NAME'),
