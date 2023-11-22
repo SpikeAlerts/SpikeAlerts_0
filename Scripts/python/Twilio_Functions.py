@@ -33,7 +33,7 @@ def send_texts(numbers, messages, account_sid, auth_token, twilio_number): # cou
         
         time.sleep(1) # Sleeping for 1 second between sending messages
         
-        times.append(msg.date_updated.astimezone(pytz.timezone('America/Chicago'))) # Append times sent <- these come in utc
+        times.append(msg.date_updated.replace(tzinfo=pytz.timezone('America/Chicago'))) # Append times sent - must change timezone in TWILIO otherwise I think it defaults to pacific time
         
     return times
     
