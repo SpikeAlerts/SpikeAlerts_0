@@ -9,3 +9,4 @@ Scripts/database/*up.sql
 *.cpython-310.pyc 
 Notebooks/1_Initialize_Database/City_Comparisons/*
 Scripts/python/test.txt
+__pycache__
