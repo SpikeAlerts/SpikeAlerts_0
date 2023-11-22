@@ -69,14 +69,16 @@ purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN') # PurpleAir API Read Key
 
 # Database credentials
 
-creds = [os.getenv('DB_NAME'),
-         os.getenv('DB_USER'),
-         os.getenv('DB_PASS'),
-         os.getenv('DB_PORT'),
-         os.getenv('DB_HOST'),
-         "-c search_path=spikealerts"
-        ]
-pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host','options'], creds)) 
+from App.modules.db_conn import pg_connection_dict
+
+# creds = [os.getenv('DB_NAME'),
+#          os.getenv('DB_USER'),
+#          os.getenv('DB_PASS'),
+#          os.getenv('DB_PORT'),
+#          os.getenv('DB_HOST'),
+#          os.getenv('DB_OPTIONS')
+#         ]
+# pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host','options'], creds)) 
 
 ## Other Constants from System Arguments
 

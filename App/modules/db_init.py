@@ -21,6 +21,7 @@ import geopandas as gpd # Spatial Data Manipulation
 
 import psycopg2 # For working with postgresql database
 from psycopg2 import sql
+from App.modules.db_conn import pg_connection_dict
 
 # Environmental variables
 
@@ -28,14 +29,14 @@ cwd = os.getcwd()
 from dotenv import load_dotenv # Loading .env info
 load_dotenv() # Load .env file
 purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN')
-creds = [os.getenv('DB_NAME'),
-         os.getenv('DB_USER'),
-         os.getenv('DB_PASS'),
-         os.getenv('DB_PORT'),
-         os.getenv('DB_HOST'),
-         "-c search_path=spikealerts"
-        ]
-pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host','options'], creds)) 
+# creds = [os.getenv('DB_NAME'),
+#          os.getenv('DB_USER'),
+#          os.getenv('DB_PASS'),
+#          os.getenv('DB_PORT'),
+#          os.getenv('DB_HOST'),
+#          os.getenv('DB_OPTIONS')
+#         ]
+# pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host', 'options'], creds)) 
 
 # Load our Functions
 
