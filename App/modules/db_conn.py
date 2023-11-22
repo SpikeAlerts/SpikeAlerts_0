@@ -5,13 +5,11 @@ load_dotenv()
 
 if os.getenv('DATABASE_URL'):
   parsed_url = urlparse(os.getenv('DATABASE_URL'))
-  print(parsed_url)
-
   creds = [parsed_url.path[1:],
         parsed_url.username,
         parsed_url.password,
-        parsed_url.hostname,
         parsed_url.port,
+        parsed_url.hostname,
         quote(os.getenv('DB_OPTIONS'))
         ]
   print(creds)
