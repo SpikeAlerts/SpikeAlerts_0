@@ -1,10 +1,7 @@
-# This is the main script for the AQ_Spike Alerts Project
-# To run:
-# 1) Please change directories to ./Scripts/python
-# 2) Make sure you have the python environment activated (see Conda_Environment.yml for dependencies)
-# 3) Call this script as follows: python MAIN.py spike_theshold_in_ugs days_to_run timestep_in_minutes
-    # Example python MAIN.py 35 7 10
-    # Will run the program for 7 days, update every 10 minutes, and alert people of sensors reading over 35 micrograms per meter cubed
+## This script will run when the flask app runs, and will prevent any access the server endpoints.
+# This is an extremely sloppy way to do deploy this script.
+# days_to_run, timestop, and spike_threshold are all hard-coded.
+# Lines 60-65, 273-276, 302 must be uncommented-out to run properly.
 
 ### Prep
 
@@ -102,7 +99,7 @@ verfied_number = True
 def main_loop():
     days_to_run = 1
     starttime = dt.datetime.now(pytz.timezone('America/Chicago'))
-    stoptime = starttime + dt.timedelta(minutes=days_to_run)    
+    stoptime = starttime + dt.timedelta(days=days_to_run)    
     print(f'''Beginning program
 
     Running for {days_to_run} days
