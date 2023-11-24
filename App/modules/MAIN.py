@@ -293,7 +293,7 @@ def main_loop():
 
         # SLEEP between updates
 
-        when_to_awake = now + dt.timedelta(seconds=timestep) 
+        when_to_awake = now + dt.timedelta(minutes=timestep) 
 
         sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything without texting... I think?
 
