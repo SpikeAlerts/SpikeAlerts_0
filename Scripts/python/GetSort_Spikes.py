@@ -4,7 +4,7 @@
 
 # Purple Air
 
-from App.modules import PurpleAir_Functions as purp
+import PurpleAir_Functions as purp
 
 # Time
 
@@ -13,8 +13,8 @@ import pytz # Timezones
 
 # Database 
 
-from App.modules import Our_Queries as query
-from App.modules import Basic_PSQL as psql
+import Our_Queries as query
+import Basic_PSQL as psql
 from psycopg2 import sql
 
 # Data Manipulation

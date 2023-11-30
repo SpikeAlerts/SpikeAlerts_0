@@ -1,0 +1,22 @@
+name: SpikeAlerts
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python =3.10
+  - pip
+  - geopandas
+  - descartes
+  - ipython
+  - ipywidgets
+  - jupyterlab
+  - seaborn
+  - statsmodels
+  - folium
+  - contextily
+  - rioxarray
+  - geopy
+  - openpyxl
+  - psycopg2-binary
+  - twilio
+  - python-dotenv

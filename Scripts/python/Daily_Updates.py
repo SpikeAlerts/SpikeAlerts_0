@@ -10,8 +10,8 @@ import pytz # Timezones
 
 # Database 
 
-from App.modules import Basic_PSQL as psql
-from App.modules import Our_Queries as query
+import Basic_PSQL as psql
+import Our_Queries as query
 from psycopg2 import sql
 import psycopg2
 
@@ -23,15 +23,13 @@ import numpy as np
 
 # Load our functions
 
-from App.modules import PurpleAir_Functions as purp
-from App.modules import REDCap_Functions as redcap
-from App.modules import Twilio_Functions as our_twilio
+import PurpleAir_Functions as purp
+import REDCap_Functions as redcap
+import Twilio_Functions as our_twilio
 
 # Messaging
 
-from App.modules import Create_messages
-from App.modules import PurpleAir_Functions as purp
-from App.modules import REDCap_Functions as redcap
+import Create_messages
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

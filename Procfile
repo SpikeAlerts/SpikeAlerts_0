@@ -1,1 +1,0 @@
-web: gunicorn App.aq_spikealerts:app
