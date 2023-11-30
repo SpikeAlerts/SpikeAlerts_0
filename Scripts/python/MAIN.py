@@ -86,8 +86,8 @@ starttime = dt.datetime.now(pytz.timezone('America/Chicago'))
 stoptime = starttime + dt.timedelta(days=days_to_run)
 
 # Waking hours
-too_late_hr = 25 # 9pm
-too_early_hr = -1 # 8am
+too_late_hr = 21 # 9pm
+too_early_hr = 8 # 8am
 
 # Report URL
 
