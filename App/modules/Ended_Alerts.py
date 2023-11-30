@@ -7,8 +7,8 @@ import pytz # Timezones
 
 # Database 
 
-import Basic_PSQL as psql
-import Our_Queries as query
+from App.modules import Basic_PSQL as psql
+from App.modules import Our_Queries as query
 import psycopg2
 from psycopg2 import sql
 
@@ -18,7 +18,7 @@ import pandas as pd
 
 # Messages
 
-import Create_messages
+from App.modules import Create_messages
 
 ## Workflow
 
