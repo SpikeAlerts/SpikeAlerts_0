@@ -155,9 +155,9 @@ def Initialize_report(record_id, reports_for_day, pg_connection_dict):
     
     # Create Report_id
     
-    now = dt.datetime.now(pytz.timezone('America/Chicago'))
+    report_date = dt.datetime.now(pytz.timezone('America/Chicago')).replace(minute=0, second=1) - dt.timedelta(hours=8) # Making sure date aligns with daily update (8am)
     
-    report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
+    report_id = str(reports_for_day).zfill(5) + '-' + report_date.strftime('%m%d%y') # XXXXX-MMDDYY
     # Use the record_id to query for the user's cached_alerts
     # Then aggregate from those alerts the start_time, time_difference, max_reading, and nested sensor_indices
     # Unnest the sensor indices into an array of unique sensor_indices
