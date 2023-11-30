@@ -7,8 +7,8 @@ import pytz # Timezones
 
 # Database 
 
-import Basic_PSQL as psql
-import Our_Queries as query
+from App.modules import Basic_PSQL as psql
+from App.modules import Our_Queries as query
 from psycopg2 import sql
 import psycopg2
 
@@ -20,8 +20,8 @@ import numpy as np
 
 # Load our functions
 
-import PurpleAir_Functions as purp
-import REDCap_Functions as redcap
+from App.modules import PurpleAir_Functions as purp
+from App.modules import REDCap_Functions as redcap
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
