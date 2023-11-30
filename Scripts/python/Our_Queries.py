@@ -130,8 +130,11 @@ def Get_newest_user(pg_connection_dict):
     ''')
 
     response = psql.get_response(cmd, pg_connection_dict)
-
-    max_record_id = response[0][0]
+    
+    if response[0][0] == None:
+        max_record_id = 0
+    else:
+        max_record_id = response[0][0]
     
     return max_record_id
 
