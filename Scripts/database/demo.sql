@@ -1,4 +1,4 @@
--- VIEW? Find users' last_seen (CTE) <- Could be changed to last_elevated
+-- VIEW? Find users' last_elevated (CTE)
 
 WITH users as -- Select users to potentially message
 (
@@ -6,7 +6,7 @@ SELECT record_id, geometry
 FROM "Sign Up Information"
 WHERE record_id = ANY ( ARRAY[1,2,3,4,5] ) -- inserted record_ids
 )
-SELECT u.record_id, MAX(p.last_seen) as last_seen
+SELECT u.record_id, MAX(p.last_elevated) as last_elevated
 FROM users u, "PurpleAir Stations" p
 WHERE ST_DWithin(u.geometry, p.geometry, 1000) -- All Sensors within 1 kilometer
 GROUP BY u.record_id;
@@ -71,7 +71,7 @@ with alerts as
 (
 	SELECT alert_index, sensor_indices[1] as sensor_index, start_time, duration_minutes, max_reading
 	FROM "Archived Alerts Acute PurpleAir"
-	WHERE start_time > DATE('2023-11-11')
+	WHERE start_time > DATE('2023-11-17')
 )
 SELECT a.alert_index,
 		p.name, 
@@ -84,22 +84,36 @@ SELECT a.alert_index,
 FROM alerts a
 INNER JOIN "PurpleAir Stations" p ON (p.sensor_index = a.sensor_index);
 
--- This shows all the alerts at each station
+-- This shows all the active alerts at each station
+
+WITH alerts as
+(
+	SELECT start_time, max_reading, 
+			sensor_indices[1] as sensor_index
+	FROM "Active Alerts Acute PurpleAir"
+	GROUP BY sensor_indices[1]
+)
+SELECT a.sensor_index, a.start_time, a.max_reading, p.geometry
+FROM alerts a
+INNER JOIN "PurpleAir Stations" p ON (p.sensor_index = a.sensor_index);
+
+-- This shows a summary of the alerts at each station beyond a specified date
 
 WITH alerts as
 (
 	SELECT COUNT(start_time) as count, ARRAY_AGG(start_time) as start_time, 
-			ARRAY_AGG(duration_minutes) as duration_minutes, 
-			ARRAY_AGG(max_reading) as max_reading, 
+			AVG(duration_minutes) as duration_minutes, 
+			AVG(max_reading) as max_reading, 
 			sensor_indices[1] as sensor_index
 	FROM "Archived Alerts Acute PurpleAir"
+	WHERE start_time > DATE('2023-11-25')
 	GROUP BY sensor_indices[1]
 )
 SELECT a.sensor_index, a.count, a.start_time, a.duration_minutes, a.max_reading, p.geometry
 FROM alerts a
 INNER JOIN "PurpleAir Stations" p ON (p.sensor_index = a.sensor_index);
 
--- Find users within a distance (1km is used, but can change 1000 to 1609.34)
+-- Find users within a distance from a sensor (1km is used, but can change 1000 to 1609.34)
 
 WITH sensor as -- query for the desired sensor
     (
