@@ -10,4 +10,3 @@ Scripts/database/*up.sql
 *.cpython-310.pyc 
 Notebooks/1_Initialize_Database/City_Comparisons/*
 **test.txt
-env

@@ -1,46 +1,95 @@
 ### Import Packages
 
-# File manipulation
+# Time
 
-import os # For working with Operating System
-import requests # Accessing the Web
 import datetime as dt # Working with dates/times
+import pytz # Timezones
 
 # Database 
 
-import psycopg2
+from App.modules import Basic_PSQL as psql
+from App.modules import Our_Queries as query
 from psycopg2 import sql
+import psycopg2
 
 # Analysis
 
-import numpy as np
 import pandas as pd
+import geopandas as gpd
+import numpy as np
 
 # Load our functions
 
-# import Get_spikes_df as get_spikes
-exec(open('App/modules/Get_spikes_df.py').read())
+from App.modules import PurpleAir_Functions as purp
+from App.modules import REDCap_Functions as redcap
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# PurpleAir Stations
+## Workflow
+
+def workflow(next_update_time, reports_for_day, messages_sent_today, purpleAir_api, redCap_token_signUp, pg_connection_dict, timezone = 'America/Chicago'):
+    '''
+    This is the full workflow for Daily Updates
+    
+    returns the next_update_time (datetime timestamp), reports_for_day, messages_sent_today (ints)
+    '''
+    
+    # PurpleAir
+    # If we haven't already updated the full sensor list today, let's do that
+    
+    last_PurpleAir_update = query.Get_last_PurpleAir_update(pg_connection_dict, timezone = timezone) # See Daily_Updates.py      
+      
+    if last_PurpleAir_update < next_update_time: # If haven't updated full system today
+        # Update "PurpleAir Stations" from PurpleAir
+        Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api)
+    
+        # Update "Sign Up Information" from REDCap - See Daily_Updates.py
+        max_record_id = query.Get_newest_user(pg_connection_dict)
+        REDCap_df = redcap.Get_new_users(max_record_id, redCap_token_signUp)
+        Add_new_users(REDCap_df, pg_connection_dict)
+        print(len(REDCap_df), 'new users')
+        
+        print(reports_for_day, 'reports yesterday')
+        print(messages_sent_today, 'messages sent yesterday')
+        
+        # Initialize storage for daily metrics
+        reports_for_day = 0
+        messages_sent_today = 0
+    
+    # Get next update time (in 1 day)
+    next_update_time += dt.timedelta(days=1)
+    
+    return next_update_time, reports_for_day, messages_sent_today
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
 
 def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
     '''
     This is the full workflow for updating our sensor information in the database. 
     Please see Daily_Updates.py for specifics on the functions
+    
+    test with 
+    
+    UPDATE "PurpleAir Stations"
+    SET channel_state = 3, channel_flags = 4;
+
+    DELETE FROM "PurpleAir Stations"
+    WHERE sensor_index = 143634;
+
+    UPDATE "PurpleAir Stations"
+    SET name = 'wrong_name'
+    WHERE sensor_index = 143916;
     '''
     # Load information from our database
-    sensors_df = Get_our_sensor_info(pg_connection_dict) # Get our sensor info
+    sensors_df = query.Get_our_sensor_info(pg_connection_dict) # Get our sensor info
     
     # Load information from PurpleAir
-    nwlng, selat, selng, nwlat = Get_extent(pg_connection_dict) # Get bounds of our project
-    purpleAir_df = Get_PurpleAir(nwlng, selat, selng, nwlat, purpleAir_api) # Get PurpleAir data
+    nwlng, selat, selng, nwlat = query.Get_extent(pg_connection_dict) # Get bounds of our project
+    purpleAir_df = Get_PurpleAir(nwlng, selat, selng, nwlat, purpleAir_api) # Get PurpleAir data    
     
     # Merge the datasets
-    merged = pd.merge(sensors_df,
+    merged_df = pd.merge(sensors_df,
                      purpleAir_df, 
                      on = 'sensor_index', 
                      how = 'outer',
@@ -49,230 +98,48 @@ def Sensor_Information_Daily_Update(pg_connection_dict, purpleAir_api):
                                  )
                                  
     # Clean up datatypes
-    merged['sensor_index'] = merged.sensor_index.astype(int)
-    merged['channel_state'] = merged.channel_state.astype(int)
+    merged_df['sensor_index'] = merged_df.sensor_index.astype(int)
+    merged_df['channel_state'] = merged_df.channel_state.astype("Int64")
+    merged_df['channel_flags_PurpleAir'] = merged_df.channel_flags_PurpleAir.astype("Int64")
+    merged_df['channel_flags_SpikeAlerts'] = merged_df.channel_flags_SpikeAlerts.astype("Int64")
     
-    # Do the names match up?
-    names_match = (merged.name_SpikeAlerts == merged.name_PurpleAir)
+    # Sort the sensors
+    sensors_dict = Sort_Sensors(merged_df) # A dictionary of lists of sensor_indices - categories/keys: 'Same Names', 'New', 'Expired', 'Conflicting Names', 'New Flags'
     
-    # Different Names
-    diffName_df = merged[~names_match]
+    if len(sensors_dict['New']): # Add new sensors to our database (another PurpleAir api call)
     
-    if len(diffName_df):
-    
-        ## New Name - in PurpleAir not ours - Add to our database (another PurpleAir api call)
-        ### Conditions
-        is_new_name = diffName_df.name_SpikeAlerts.isna() # Boolean Series
-        # Sensor Indices as a list
-        new_indices = diffName_df[is_new_name].sensor_index.to_list()
-        if len(new_indices) > 0:
-            Add_new_PurpleAir_Stations(new_indices, pg_connection_dict, purpleAir_api)
+        Add_new_PurpleAir_Stations(sensors_dict['New'], pg_connection_dict, purpleAir_api)
         
-        ## No PurpleAir Name - Potentially old sensors - flag channel_state if last seen greater than 4 days
-        ### Conditions
-        no_name_PurpleAir = (diffName_df.name_PurpleAir.isna()) # Boolean Series
-        not_seen_recently = (diffName_df.last_seen_SpikeAlerts.dt.date <
-                            (dt.datetime.now(pytz.timezone('America/Chicago')
-                            ) - dt.timedelta(days = 4)).date()) # Seen recently?
-        good_channel_state = (diffName_df.channel_state != 0) # Were we aware?
-        # Sensor Indices as a list
-        bad_indices = diffName_df[no_name_PurpleAir & not_seen_recently & good_channel_state
-                                  ].sensor_index.to_list()
-        if len(bad_indices) > 0:
-            Flag_station_channel_state(bad_indices, pg_connection_dict)
+    if len(sensors_dict['Expired']): # "Retire" old sensors
         
-        ## Both have names but they're different - update with purpleair info
-        ### Conditions
-        name_controversy = (~no_name_PurpleAir & ~is_new_name) # Not new and not no name from PurpleAir
-        # The dataframe under these conditions
-        name_controversy_df = diffName_df[name_controversy] # Has a different name!
-        if len(name_controversy_df.sensor_index) > 0:
-            Update_name(name_controversy_df, pg_connection_dict)
-            
-            
-    # Same Names
+        Flag_channel_states(sensors_dict['Expired'], pg_connection_dict)
     
-    # If we've got a 4 in our channel_flags
-    # the issue is from the previous day.
-
-    # We should probably notify the City! <- done in notebook 3_Daily_Updates/1_PurpleAir_Stations.ipynb
-
-    is_new_issue = (merged.channel_flags_SpikeAlerts == 4)
-
-    new_issue_df = merged[is_new_issue]
-    
-    if len(new_issue_df) > 0:
-    
-        # Conditions
-
-        conditions = ['wifi_down?', 'a_down', 'b_down', 'both_down'] # corresponds to 0, 1, 2, 3 from PurpleAir channel_flags
-
-        # Initialize storage
-
-        email = '''Hello City of Minneapolis Health Department,
-
-        Writing today to inform you of some anomalies in the PurpleAir sensors that we discovered:
-
-        name, last seen, channel issue
-
-        '''
-
-        for i, condition in enumerate(conditions):
-
-            con_df = new_issue_df[new_issue_df.channel_flags_PurpleAir == i]
-
-            if i == 0: # Only "serious" wifi issue if longer than 6 hours
-
-                con_df = con_df[(con_df.last_seen_PurpleAir < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(hours = 6))]
-
-            for i, row in con_df.iterrows():
-
-                    
-                email += f'\n{row.name_PurpleAir}, {row.last_seen_PurpleAir.strftime("%m/%d/%y - %H:%M")}, {condition}'
-
-        email += '\n\nTake Care,\nSpikeAlerts'
-        print(email)
+    if len(sensors_dict['Conflicting Names']): # Update our name
         
-    # Then update all the channel flags and last seens
+        Update_name(sensors_dict['Conflicting Names'], merged_df, pg_connection_dict)
+        
+    if len(sensors_dict['New Flags']): # Email the City about these new issues
 
-    Update_Flags_LastSeen(merged[names_match].copy(), pg_connection_dict)
+        Email_City_flagged_sensors(sensors_dict['New Flags'], merged_df)
     
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def Get_our_sensor_info(pg_connection_dict):
-    '''
-    Gets all sensors from our database for a daily update check
+    if len(sensors_dict['Same Names']): # Update our database's last_seen, channel_flags, 
+        
+        Update_Flags_LastSeen(sensors_dict['Same Names'], merged_df, pg_connection_dict)   
     
-    returns sensors_df 
-    
-    with columns sensor_index, last_seen, name, channel_flags, channel_state
-    types: int, datetime 'America/Chicago', str, int, int
-    '''
-    
-    # Connect
-    conn = psycopg2.connect(**pg_connection_dict) 
-    # Create cursor
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''SELECT sensor_index, last_seen, name, channel_flags, channel_state
-    FROM "PurpleAir Stations";
-    ''')
-
-    cur.execute(cmd) # Execute
-    conn.commit() # Committ command
-
-    # Unpack response into pandas series
-
-    sensors_df = pd.DataFrame(cur.fetchall(), columns = ['sensor_index', 'last_seen', 'name', 'channel_flags', 'channel_state'])
-    
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
-
-    # Datatype corrections
-    sensors_df['sensor_index']  = sensors_df.sensor_index.astype(int)
-    sensors_df['last_seen'] = pd.to_datetime(sensors_df['last_seen'])
-    sensors_df['channel_flags'] = sensors_df.channel_flags.astype(int)
-    sensors_df['channel_state'] = sensors_df.channel_state.astype(int)
-    
-    return sensors_df
-    
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def Get_extent(pg_connection_dict): 
-    '''
-    Gets the bounding box of our project's extent + 100 meters ("Minneapolis Boundary")
-    
-    Specifically for PurpleAir api
-    
-    returns nwlng, selat, selng, nwlat AS strings
-    '''   
-    
-    # Connect
-    conn = psycopg2.connect(**pg_connection_dict) 
-    # Create cursor
-    cur = conn.cursor()
-    
-    # Query for bounding box of boundary buffered 100 meters
-
-    cmd = sql.SQL('''
-    WITH buffer as
-	    (
-	    SELECT ST_BUFFER(ST_Transform(ST_SetSRID(geometry, 4326),
-								      26915),
-					     100) geom -- buff the geometry by 100 meters
-	    FROM "Minneapolis Boundary"
-	    ), bbox as
-	    (
-	    SELECT ST_EXTENT(ST_Transform(geom, 4326)) b
-	    FROM buffer
-	    )
-    SELECT b::text
-    FROM bbox;
-    ''')
-
-    cur.execute(cmd) # Execute
-    conn.commit() # Committ command
-    
-    # Gives a string
-    response = cur.fetchall()[0][0]
-    
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
-    
-    # Unpack the response
-
-    num_string = response[4:-1]
-    
-    # That's in xmin, ymin, xmax, ymax
-    xmin = num_string.split(' ')[0]
-    ymin = num_string.split(' ')[1].split(',')[0]
-    xmax = num_string.split(' ')[1].split(',')[1]
-    ymax = num_string.split(' ')[2]
-    
-    # Convert into PurpleAir API notation
-    nwlng, selat, selng, nwlat = xmin, ymin, xmax, ymax
-    
-    return nwlng, selat, selng, nwlat
-    
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def Get_PurpleAir(nwlng, selat, selng, nwlat, purpleAir_api):
     '''
-    This function gets Purple Air data for all sensors in the given boundary
+    This function gets Purple Air data for all sensors in the given boundary and filters for only City sensors
     
     returns a dataframe purpleAir_df
     fields: 'sensor_index', 'channel_flags', 'last_seen', 'name'
     datatypes: int, int, datetime timezone 'America/ Chicago', str
     '''
     
-    #Setting parameters for API call for comparing to our data
-
-    # Bounding string
-    bounds_strings = [f'nwlng={nwlng}',
-                      f'nwlat={nwlat}',
-                      f'selng={selng}',
-                      f'selat={selat}']
-    bounds_string = '&'.join(bounds_strings)  
-    # Field string
-    fields = ['sensor_index', 'channel_flags', 'last_seen', 'name']
-    fields_string = 'fields=' + '%2C'.join(fields)
-
-    # Finalizing query for API function
-    query_string = '&'.join([fields_string, bounds_string])
+    fields = ['sensor_index', 'channel_flags', 'last_seen', 'name'] # The PurpleAir fields we want
     
-    response = getSensorsData(query_string, purpleAir_api) # See Get_spikes_df.py
-    
-    # Unpack response as a dataframe
-    response_dict = response.json() # Read response as a json (dictionary)
-
-    col_names = response_dict['fields']
-    data = np.array(response_dict['data'])
-    df = pd.DataFrame(data, columns = col_names) # Convert to dataframe
-
+    df, runtime = purp.Get_PurpleAir_df_bounds(fields, nwlng, selat, selng, nwlat, purpleAir_api)
     
     # Datatype corrections
     df['sensor_index']  = df.sensor_index.astype(int)
@@ -290,6 +157,58 @@ def Get_PurpleAir(nwlng, selat, selng, nwlat, purpleAir_api):
     return purpleAir_df
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def Sort_Sensors(merged_df):
+    '''
+    This function will sort the sensors for daily updates and return a dictionary
+    of lists of sensor_indices (integers)
+    
+    categories/keys: 'Same Names', 'New', 'Expired', 'Conflicting Names', 'New Flags'
+    '''
+    
+    # Conditions (Boolean Pandas Series)
+    
+    # Do the names match up?
+    names_match = (merged_df.name_SpikeAlerts == merged_df.name_PurpleAir)
+    # Do we not have the name?
+    no_name_SpikeAlerts = (merged_df.name_SpikeAlerts.isna())
+    # Does PurpleAir not have the name?
+    no_name_PurpleAir = (merged_df.name_PurpleAir.isna())
+    # We haven't seen recently? - within 30 days
+    not_seen_recently = (merged_df.last_seen_SpikeAlerts <
+                            np.datetime64((dt.datetime.now(pytz.timezone('America/Chicago')
+                            ) - dt.timedelta(days = 30))))
+    # Good channel State
+    good_channel_state = (merged_df.channel_state != 0)
+    # New Flags (within past day) - a 4 in our database
+    is_new_issue = (merged_df.channel_flags_SpikeAlerts == 4)
+
+    # Use the conditions to sort
+
+    same_name_indices = merged_df[names_match].sensor_index.to_list()
+    new_indices = merged_df[(~names_match) 
+                            & (no_name_SpikeAlerts)].sensor_index.to_list()
+    expired_indices = merged_df[(~names_match) 
+                                & (no_name_PurpleAir) 
+                                & (not_seen_recently)
+                                & (good_channel_state)].sensor_index.to_list()
+    confilcting_name_indices = merged_df[(~names_match) 
+                                        & (~no_name_PurpleAir) 
+                                        & (~no_name_SpikeAlerts)].sensor_index.to_list()
+    new_flag_indices = merged_df[(is_new_issue)].sensor_index.to_list()
+    
+    # Create the dictionary
+    
+    sensors_dict = {'Same Names':same_name_indices,
+                   'New':new_indices,
+                   'Expired':expired_indices, 
+                   'Conflicting Names':confilcting_name_indices, 
+                   'New Flags':new_flag_indices
+                    }
+                    
+    return sensors_dict
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
 def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api):
     '''
@@ -299,123 +218,70 @@ def Add_new_PurpleAir_Stations(sensor_indices, pg_connection_dict, purpleAir_api
     '''
     
     #Setting parameters for API
-    fields = ['firmware_version','date_created','last_modified','last_seen', 'name', 'uptime','position_rating','channel_state','channel_flags','altitude',
-                  'latitude', 'longitude']                  
-    fields_string = 'fields=' + '%2C'.join(fields) 
-    sensor_string = 'show_only=' + '%2C'.join([str(sensor_index) for sensor_index in sensor_indices]) 
-    query_string = '&'.join([fields_string, sensor_string])
+    fields = ['date_created', 'last_seen', 'name', 'position_rating','channel_state','channel_flags','altitude',
+                  'latitude', 'longitude']          
     
-    response = getSensorsData(query_string, purpleAir_api)
+    df, runtime = purp.Get_PurpleAir_df_sensors(purpleAir_api, sensor_indices, fields)
 
-    # Unpack response
-    response_dict = response.json() # Read response as a json (dictionary)
-    col_names = response_dict['fields']
-    data = np.array(response_dict['data'])
+    if len(df) > 0:
 
-    df = pd.DataFrame(data, columns = col_names)
+        # Correct Last Seen/date created into datetimes (in UTC UNIX time)
 
-    # Correct Last Seen/modified/date created into datetimes (in UTC UNIX time)
-
-    df['last_modified'] = pd.to_datetime(df['last_modified'].astype(int),
+        df['date_created'] = pd.to_datetime(df['date_created'].astype(int),
                                                  utc = True,
                                                  unit='s').dt.tz_convert('America/Chicago')
-    df['date_created'] = pd.to_datetime(df['date_created'].astype(int),
-                                             utc = True,
-                                             unit='s').dt.tz_convert('America/Chicago')
-    df['last_seen'] = pd.to_datetime(df['last_seen'].astype(int),
-                                             utc = True,
-                                             unit='s').dt.tz_convert('America/Chicago')
-    
-     # Make sure sensor_index is an integer
-    
-    df['sensor_index'] = pd.to_numeric(df['sensor_index'])
+        df['last_seen'] = pd.to_datetime(df['last_seen'].astype(int),
+                                                 utc = True,
+                                                 unit='s').dt.tz_convert('America/Chicago')
+        
+         # Make sure sensor_index is an integer
+        
+        df['sensor_index'] = pd.to_numeric(df['sensor_index'])
 
-    # Spatializing
-                                         
-    gdf = gpd.GeoDataFrame(df, 
+        # Spatializing
+                                             
+        gdf = gpd.GeoDataFrame(df, 
                                 geometry = gpd.points_from_xy(
                                     df.longitude,
                                     df.latitude,
                                     crs = 'EPSG:4326')
-                               )
-    
-    cols_for_db = ['sensor_index', 'firmware_version', 'date_created', 'last_modified', 'last_seen',
-     'name', 'uptime', 'position_rating', 'channel_state', 'channel_flags', 'altitude', 'geometry'] 
-    
-    # Get values ready for database
-
-    sorted_df = gdf.copy()[cols_for_db[:-1]]  # Drop unneccessary columns & sort columns by cols_for db (without geometry - see next line)
-    
-    # Get Well Known Text of the geometry
-                         
-    sorted_df['wkt'] = gdf.geometry.apply(lambda x: x.wkt)
-    
-    # Format the times
-    
-    sorted_df['date_created'] = gdf.date_created.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
-    sorted_df['last_modified'] = gdf.last_modified.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
-    sorted_df['last_seen'] = gdf.last_seen.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
-
-    # Connect to PostGIS Database
-
-    conn = psycopg2.connect(**pg_connection_dict)
-    cur = conn.cursor()
-    
-    # iterate over the dataframe and insert each row into the database using a SQL INSERT statement
-    
-    for index, row in sorted_df.copy().iterrows():
-    
-        q1 = sql.SQL('INSERT INTO "PurpleAir Stations" ({}) VALUES ({},{});').format(
-         sql.SQL(', ').join(map(sql.Identifier, cols_for_db)),
-         sql.SQL(', ').join(sql.Placeholder() * (len(cols_for_db)-1)),
-         sql.SQL('ST_SetSRID(ST_GeomFromText(%s), 4326)::geometry'))
-        # print(q1.as_string(conn))
-        # print(row)
-        # break
+                                   )
         
-        cur.execute(q1.as_string(conn),
-            (list(row.values))
-            )
-    # Commit commands
-    
-    conn.commit()
-    
-    # Close the cursor and connection
-    cur.close()
-    conn.close()
-    
+        cols_for_db = ['sensor_index', 'date_created', 'last_seen',
+         'name', 'position_rating', 'channel_state', 'channel_flags', 'altitude']
+         
+        sorted_df = gdf.copy()[cols_for_db] 
+        
+        # Get Well Known Text of the geometry
+                             
+        sorted_df['geometry'] = gdf.geometry.apply(lambda x: x.wkt)
+        
+        # Format the times
+        
+        sorted_df['date_created'] = gdf.date_created.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
+        sorted_df['last_seen'] = gdf.last_seen.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
+         
+        psql.insert_into(sorted_df, "PurpleAir Stations", pg_connection_dict, is_spatial = True)    
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
-def Flag_channel_state(sensor_indices, pg_connection_dict):
+def Flag_channel_states(sensor_indices, pg_connection_dict):
     '''
     To be used on sensors that haven't been seen in a while...
     
-    Sets all channel_states to zero for the sensor_indices (a list of sensor_index/integers) in "PurpleAir Stations"
+    Sets all channel_states to zero and channel_flags to 3 for the sensor_indices (a list of sensor_index/integers) in "PurpleAir Stations"
     '''
     
-    conn = psycopg2.connect(**pg_connection_dict)
-    
-    # Create json cursor
-    cur = conn.cursor()
-    
     cmd = sql.SQL('''UPDATE "PurpleAir Stations"
-SET channel_state = 0
+SET channel_state = 0, channel_flags = 3
 WHERE sensor_index = ANY ( {} );
     ''').format(sql.Literal(sensor_indices))
     
-    cur.execute(cmd) # Execute
-    
-    conn.commit() # Committ command
-    
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
+    psql.send_update(cmd, pg_connection_dict)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def Update_name(name_controversy_df, pg_connection_dict):
+def Update_name(sensor_indices, merged_df, pg_connection_dict):
     '''
     This function takes in a dataframe of merged "Sensor Information" where the names don't match
     and updates name, last_seen & channel_flags in our database to the most recent PurpleAir data
@@ -425,12 +291,14 @@ def Update_name(name_controversy_df, pg_connection_dict):
     pd.merge(sensors_df, purpleAir_df, on = 'sensor_index', how = 'outer', suffixes = ('_SpikeAlerts', '_PurpleAir') )
     '''
     
+    name_controversy_df = merged_df[merged_df.sensor_index.isin(sensor_indices)].copy()
+    
     # Make sure the datatypes are correct
-    name_controversy_df['channel_flags_PurpleAir'] = name_controversy_df.channel_flags_PurpleAir.astype(int)
     name_controversy_df['last_seen_PurpleAir'] = name_controversy_df.last_seen_PurpleAir.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
     
     # Connect to database
-    conn = psycopg2.connect(**pg_connection_dict) 
+    conn = psycopg2.connect(**pg_connection_dict,
+                            keepalives_idle=20)
     # Create cursor
     cur = conn.cursor()
     
@@ -455,8 +323,48 @@ def Update_name(name_controversy_df, pg_connection_dict):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def Email_City_flagged_sensors(sensor_indices, merged_df):
+    '''
+    This function composes an email to the city about recently flagged sensors and prints it
+    '''
+    
+    new_issue_df = merged_df[merged_df.sensor_index.isin(sensor_indices)].copy()
+    
+    # Conditions
 
-def Update_Flags_LastSeen(sameName_df, pg_connection_dict):
+    conditions = ['wifi_down?', 'a_down', 'b_down', 'both_down'] # corresponds to 0, 1, 2, 3 from PurpleAir channel_flags
+
+    # Initialize storage
+
+    email = '''Hello City of Minneapolis Health Department,
+
+    Writing today to inform you of some anomalies in the PurpleAir sensors that we discovered:
+
+    name, last seen, channel issue
+
+    '''
+
+    for i, condition in enumerate(conditions):
+
+        con_df = new_issue_df[new_issue_df.channel_flags_PurpleAir == i]
+        
+        if i == 0: # These wifi issues are only important if older than 6 hours
+            not_seen_recently_PurpleAir = (con_df.last_seen_PurpleAir < dt.datetime.now(pytz.timezone('America/Chicago')) - dt.timedelta(hours = 6))
+            
+            con_df = con_df[not_seen_recently_PurpleAir]
+        
+        for i, row in con_df.iterrows():
+                
+            email += f'\n{row.name_PurpleAir}, {row.last_seen_PurpleAir.strftime("%m/%d/%y - %H:%M")}, {condition}'
+
+    email += '\n\nTake Care,\nSpikeAlerts'
+    print(email)
+        
+        
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def Update_Flags_LastSeen(sensor_indices, merged_df, pg_connection_dict):
     '''
     This function takes in a dataframe of merged "Sensor Information" where the names match
     and updates channel_flags & last_seen in our database to the most recent PurpleAir data
@@ -466,10 +374,12 @@ def Update_Flags_LastSeen(sameName_df, pg_connection_dict):
     pd.merge(sensors_df, purpleAir_df, on = 'sensor_index', how = 'outer', suffixes = ('_SpikeAlerts', '_PurpleAir') )
     '''
     
+    sameName_df = merged_df[merged_df.sensor_index.isin(sensor_indices)].copy()
+    
     # Make sure sensor_index/channel_flags/last_seen are formatted correct
     
-    sameName_df['sensor_index'] = sameName_df.sensor_index.astype(int)
-    sameName_df['channel_flags_PurpleAir'] = sameName_df.channel_flags_PurpleAir.astype(int)
+    #sameName_df['sensor_index'] = sameName_df.sensor_index.astype(int)
+    #sameName_df['channel_flags_PurpleAir'] = sameName_df.channel_flags_PurpleAir.astype(int)
     sameName_df['last_seen_PurpleAir'] = sameName_df.last_seen_PurpleAir.apply(lambda x : x.strftime('%Y-%m-%d %H:%M:%S'))
     
     if len(sameName_df.sensor_index) > 0: 
@@ -501,126 +411,27 @@ def Update_Flags_LastSeen(sameName_df, pg_connection_dict):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Sign Up Information
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
-
-def Get_newest_user(pg_connection_dict):
-    '''
-    This function gets the newest user's record_id
-    
-    returns an integer
-    '''
-    # Connect
-    conn = psycopg2.connect(**pg_connection_dict) 
-    # Create cursor
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''SELECT MAX(record_id)
-    FROM "Sign Up Information";;
-    ''')
-
-    cur.execute(cmd) # Execute
-    conn.commit() # Committ command
-
-    # Unpack response into pandas series
-
-    max_record_id = cur.fetchall()[0][0]
-
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
-    
-    return max_record_id
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
 
-def Add_new_users_from_REDCap(max_record_id, redCap_token_signUp, pg_connection_dict):
+def Add_new_users(df, pg_connection_dict):
     '''
-    This function gets the newest user's record_id
+    This function inserts the new users from REDCap into our database
+    The dataframe must have "record_id" and "wkt" as columns with the Well Known Text in WGS84 (EPSG:4326) "Lat/lon"
     '''
     
-    # REDCap Filter logic
-    filterLogic_str = f"[record_id]>{max_record_id}"
-    
-    # REDCap request
-    data = {
-    'token': redCap_token_signUp,
-    'content': 'record',
-    'action': 'export',
-    'format': 'csv',
-    'type': 'flat',
-    'csvDelimiter': '',
-    'rawOrLabel': 'raw',
-    'rawOrLabelHeaders': 'raw',
-    'exportCheckboxLabel': 'false',
-    'exportSurveyFields': 'false',
-    'exportDataAccessGroups': 'false',
-    'returnFormat': 'csv',
-    'filterLogic': filterLogic_str  
-    }
-    
-    r = requests.post('https://redcap.ahc.umn.edu/api/',data=data)
-    
-    # Unpack response
-    
-    if r.status_code == 200 and r.text != '\n': # If the request worked and non-empty
-    
-        df = pd.read_csv(StringIO(r.text))
-        
-        # Spatialize dataframe
-
-        gdf = gpd.GeoDataFrame(df, 
-                                geometry = gpd.points_from_xy(
-                                            df.lon,
-                                            df.lat,
-                                            crs = 'EPSG:4326')
-                                       )
-
-        gdf['wkt'] = gdf.geometry.apply(lambda x: x.wkt)
-        
-        # Prep for database 
-
-        focus_df = gdf[['record_id', 'wkt']]
-        cols_for_db = ['record_id', 'geometry'] 
+    if len(df) > 0:
         
         # Insert into database
         
-        # Connect
-        conn = psycopg2.connect(**pg_connection_dict) 
-        # Create cursor
-        cur = conn.cursor()
-
-        for i, row in final_df.iterrows():
-
-            q1 = sql.SQL('INSERT INTO "Sign Up Information" ({}) VALUES ({},{});').format(
-             sql.SQL(', ').join(map(sql.Identifier, cols_for_db)),
-             sql.SQL(', ').join(sql.Placeholder() * (len(cols_for_db)-1)),
-             sql.SQL('ST_SetSRID(ST_GeomFromText(%s), 4326)::geometry'))
-            # print(q1.as_string(conn))
-            # print(row)
-            # break
-            
-            cur.execute(q1.as_string(conn),
-                (list(row.values))
-                )
-                
-        # Commit commands
-        conn.commit()
-
-        # Unpack response into pandas series
-
-        max_record_id = cur.fetchall()[0][0]
-
-        # Close cursor
-        cur.close()
-        # Close connection
-        conn.close()
-
-        print(len(final_df), ' new users')
+        df['geometry'] = df.wkt
         
-    else:
-        print('No new users')
+        #print(df.geometry[0])
+        #print(type(df))
+        
+        df_for_db = df[['record_id', 'geometry']]
+        
+        psql.insert_into(df_for_db, "Sign Up Information", pg_connection_dict, is_spatial = True)
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

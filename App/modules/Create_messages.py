@@ -1,25 +1,8 @@
-### Import Packages
-
-# File manipulation
-
-import os # For working with Operating System
-import requests # Accessing the Web
-import datetime as dt # Working with dates/times
-
-# Database 
-
-import psycopg2
-from psycopg2 import sql
-
-# Analysis
-
-import numpy as np
-import geopandas as gpd
-import pandas as pd
+### Import Modules
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def new_alert_message(sensor_index, verfied_number = True):
+def new_alert_message(sensor_index, verified_number = True):
     '''
     Get a message for a new alert at a sensor_index
     # Composes and returns a single message
@@ -32,9 +15,9 @@ def new_alert_message(sensor_index, verfied_number = True):
 Air quality is unhealthy in your area'''
     
     # URLs cannot be sent until phone number is verified
-    if verfied_number:
-        message = message + '''
-https://map.purpleair.com/?select={sensor_index}/44.9723/-93.2447'''
+    if verified_number:
+        message = message + f'''
+https://map.purpleair.com/?select={int(sensor_index)}/44.9723/-93.2447'''
     else:
         message = message + '''
         Please see PurpleAir'''
@@ -48,7 +31,7 @@ Text STOP to unsubscribe'''
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def end_alert_message(duration, max_reading, report_id, base_report_url, verfied_number = True):
+def end_alert_message(duration, max_reading, report_id, base_report_url, verified_number = True):
     '''
     Get a list of messages to send when an alert is over
 
@@ -62,13 +45,13 @@ def end_alert_message(duration, max_reading, report_id, base_report_url, verfied
     '''
         
     message = f'''Alert Over
-Duration: {duration} minutes 
+Duration: {int(duration)} minutes 
 Max value: {max_reading} ug/m3
 
 Report here - '''
     
     # URLs cannot be sent until phone number is verified
-    if verfied_number:
+    if verified_number:
         message = message + f"{base_report_url+ '&report_id=' + report_id}"
     else:
         message = message + f'URL coming soon... Report ID: {report_id}'
