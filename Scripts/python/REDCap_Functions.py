@@ -85,7 +85,7 @@ def Get_new_users(max_record_id, redCap_token_signUp):
     '''
     This function gets the newest user's record_id and wkt
     
-    returns a pandas dataframe with record_id (string) and wkt (string)
+    returns a pandas dataframe with phone (string), record_id (string) and wkt (string)
     '''
     
     # REDCap Filter logic
@@ -129,7 +129,7 @@ def Get_new_users(max_record_id, redCap_token_signUp):
         
         # Prep for database 
 
-        focus_df = gdf[['record_id', 'wkt']].copy()
+        focus_df = gdf[['phone', 'record_id', 'wkt']].copy()
         
     else:
         focus_df = pd.DataFrame() # No data obtained

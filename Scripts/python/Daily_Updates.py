@@ -1,5 +1,8 @@
 ### Import Packages
 
+from dotenv import load_dotenv
+import os
+
 # Time
 
 import datetime as dt # Working with dates/times
@@ -22,6 +25,11 @@ import numpy as np
 
 import PurpleAir_Functions as purp
 import REDCap_Functions as redcap
+import Twilio_Functions as our_twilio
+
+# Messaging
+
+import Create_messages
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -417,11 +425,16 @@ def Update_Flags_LastSeen(sensor_indices, merged_df, pg_connection_dict):
 def Add_new_users(df, pg_connection_dict):
     '''
     This function inserts the new users from REDCap into our database
-    The dataframe must have "record_id" and "wkt" as columns with the Well Known Text in WGS84 (EPSG:4326) "Lat/lon"
+    The dataframe must have "phone", "record_id" and "wkt" as columns with the Well Known Text in WGS84 (EPSG:4326) "Lat/lon"
     '''
     
     if len(df) > 0:
         
+        load_dotenv()
+
+        account_sid = os.environ['TWILIO_ACCOUNT_SID']
+        auth_token = os.environ['TWILIO_AUTH_TOKEN']
+        twilio_number = os.environ['TWILIO_NUMBER']
         # Insert into database
         
         df['geometry'] = df.wkt
@@ -432,6 +445,13 @@ def Add_new_users(df, pg_connection_dict):
         df_for_db = df[['record_id', 'geometry']]
         
         psql.insert_into(df_for_db, "Sign Up Information", pg_connection_dict, is_spatial = True)
+        
+        # Now message those new users
+        
+        numbers = df.phone.to_list()
+        messages = [Create_messages.welcome_message()]*len(numbers)
+        
+        our_twilio.send_texts(numbers, messages, account_sid, auth_token, twilio_number)
     
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -58,3 +58,18 @@ Report here - '''
     # See https://help.redcap.ualberta.ca/help-and-faq/survey-parameters for filling in variable in url
         
     return message
+    
+def welcome_message():
+    '''
+    Composes a message welcoming a new user!
+    '''
+    
+    message = '''Welcome to SpikeAlerts! 
+
+We will text 8am-9pm when air quality seems unhealthy within 1 kilometer of your designated location.
+
+If you have questions, please email mplsairquality@gmail.com or see https://SpikeAlerts.github.io/Website
+
+Reply STOP to end this service'''
+
+    return message
