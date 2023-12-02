@@ -66,7 +66,7 @@ def welcome_message():
     
     
 
-message = '''Welcome to SpikeAlerts! 
+    message = '''Welcome to SpikeAlerts! 
 
 We will text 8am-9pm when air quality seems unhealthy (using 24 hour Standard) within 1 kilometer of your survey location.
 

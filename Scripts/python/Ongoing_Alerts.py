@@ -2,7 +2,7 @@
 
 # Database 
 
-from App.modules import Basic_PSQL as psql
+import Basic_PSQL as psql
 from psycopg2 import sql
 
 ## Workflow

@@ -1,7 +1,10 @@
-## This script will run when the flask app runs, and will prevent any access the server endpoints.
-# This is an extremely sloppy way to do deploy this script.
-# days_to_run, timestop, and spike_threshold are all hard-coded.
-# Lines 60-65, 273-276, 302 must be uncommented-out to run properly.
+# This is the main script for the AQ_Spike Alerts Project
+# To run:
+# 1) Please change directories to ./Scripts/python
+# 2) Make sure you have the python environment activated (see Conda_Environment.yml for dependencies)
+# 3) Call this script as follows: python MAIN.py spike_theshold_in_ugs days_to_run timestep_in_minutes
+    # Example python MAIN.py 35 7 10
+    # Will run the program for 7 days, update every 10 minutes, and alert people of sensors reading over 35 micrograms per meter cubed
 
 ### Prep
 
@@ -37,14 +40,13 @@ import pandas as pd
 
 ## Load our Functions
 
-from App.modules import Daily_Updates
-from App.modules import GetSort_Spikes
-from App.modules import New_Alerts
-from App.modules import Ongoing_Alerts
-from App.modules import Ended_Alerts
-from App.modules import Send_Alerts
-from App.modules import Twilio_Functions as our_twilio
-
+import Daily_Updates
+import GetSort_Spikes
+import New_Alerts
+import Ongoing_Alerts
+import Ended_Alerts
+import Send_Alerts
+import Twilio_Functions as our_twilio
 
 ## Global Variables
 
@@ -57,18 +59,29 @@ purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN') # PurpleAir API Read Key
 redCap_token_signUp = os.getenv('REDCAP_TOKEN_SIGNUP') # Survey Token
 redCap_token_report = os.getenv('REDCAP_TOKEN_REPORT') # Report Token
 
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_NUMBER = os.getenv('TWILIO_NUMBER')
+
 # Database credentials
 
-from App.modules.db_conn import pg_connection_dict
+creds = [os.getenv('DB_NAME'),
+         os.getenv('DB_USER'),
+         os.getenv('DB_PASS'),
+         os.getenv('DB_PORT'),
+         os.getenv('DB_HOST')
+        ]
+
+pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], creds))  
 
 ## Other Constants from System Arguments
 
-spike_threshold = int(35) # Value which defines an AQ_Spike (Micgrograms per meter cubed)
+spike_threshold = int(sys.argv[1]) # Value which defines an AQ_Spike (Micgrograms per meter cubed)
 
-timestep = int(10) # Sleep time in between updates (in seconds)
+timestep = int(sys.argv[3]) # Sleep time in between updates (in Minutes)
 
 # When to stop the program? (datetime)
-days_to_run = int(3) # How many days will we run this?
+days_to_run = int(sys.argv[2]) # How many days will we run this?
 starttime = dt.datetime.now(pytz.timezone('America/Chicago')) 
 stoptime = starttime + dt.timedelta(days=days_to_run)
 
@@ -89,53 +102,50 @@ verified_number = True
 
 
 ### The Loop
-def main_loop():
-    days_to_run = 1
-    starttime = dt.datetime.now(pytz.timezone('America/Chicago'))
-    stoptime = starttime + dt.timedelta(days=days_to_run)    
-    print(f'''Beginning program
 
-    Running for {days_to_run} days
-    Updating every {timestep} minutes
-    Spike Threshold = {spike_threshold}
+print(f'''Beginning program {sys.argv[0]}
 
-    ''')
+Running for {days_to_run} days
+Updating every {timestep} minutes
+Spike Threshold = {spike_threshold}
 
-    # Initialize next update time (8am today), storage for reports_for_day
+''')
 
-    next_update_time = starttime.replace(hour=8, minute = 0, second = 0)
-    reports_for_day = 0
-    messages_sent_today = 0
+# Initialize next update time (8am today) & storage for daily metrics
 
-    while True:
+next_update_time = starttime.replace(hour=8, minute = 0, second = 0)
+reports_for_day = 0
+messages_sent_today = 0
 
+while True:
+    try:
         now = dt.datetime.now(pytz.timezone('America/Chicago')) # The current time
 
-        print('now', now)
+        print(now)
 
-            if stoptime < now: # Check if we've hit stoptime
-                break
-        
-            # Is is within waking hours? Can we text people?
-            if (now.hour < too_late_hr) & (now.hour > too_early_hr):
-                can_text = True
-            else:
-                can_text = False
-    
-    # ~~~~~~~~~~~~~~~~~~~~~
-        
-        # Daily Updates
-        
+        if stoptime < now: # Check if we've hit stoptime
+            break
+            
+        # Is is within waking hours? Can we text people?
+        if (now.hour < too_late_hr) & (now.hour > too_early_hr):
+            can_text = True
+        else:
+            can_text = False
+
+       # ~~~~~~~~~~~~~~~~~~~~~
+       
+       # Daily Updates
+       
         if now > next_update_time:
-    
+        
             next_update_time, reports_for_day, messages_sent_today = Daily_Updates.workflow(next_update_time,
-                                                                                        reports_for_day,
-                                                                                  messages_sent_today,
-                                                                                   purpleAir_api,
-                                                                                    redCap_token_signUp,
-                                                                                    pg_connection_dict)
-    
-        # ~~~~~~~~~~~~~~~~~~~~~
+                                                                                            reports_for_day,
+                                                                                      messages_sent_today,
+                                                                                       purpleAir_api,
+                                                                                        redCap_token_signUp,
+                                                                                        pg_connection_dict)
+       
+       # ~~~~~~~~~~~~~~~~~~~~~
 
         # Query PurpleAir for Spikes and sort out if we have new, ongoing, ended, flagged, not spiked sensors
 
@@ -188,6 +198,7 @@ def main_loop():
         
             Send_Alerts.send_all_messages(record_ids_to_text, messages,
                               redCap_token_signUp,
+                              TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
                               pg_connection_dict) # in Send_Alerts.py & .ipynb
             
             # Save them locally - for developers
@@ -209,11 +220,22 @@ def main_loop():
         sleep_seconds = (when_to_awake - dt.datetime.now(pytz.timezone('America/Chicago'))).seconds # - it takes about 3 seconds to run through everything without texting... I think?
 
         time.sleep(sleep_seconds) # Sleep
+        
+    except Exception as e:
+        our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['SpikeAlerts Down'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+        print(e)
+        answer = input('\n\nWhat would you like to do? (type continue to resume)')
+        if answer == 'continue':
+            pass
+        else:
+            print(reports_for_day, 'reports so far today')
+            print(messages_sent_today, 'messages so far today')
+            break
+       
+# ~~~~~~~~~~~~~~~~~~~~~
 
-    # ~~~~~~~~~~~~~~~~~~~~~
+# Terminate Program
 
-    # Terminate Program
+#our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
 
-    # our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'])
-
-    print("Terminating Program")
+print("Terminating Program")

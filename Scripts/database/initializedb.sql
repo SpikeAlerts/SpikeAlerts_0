@@ -67,3 +67,30 @@ CREATE TABLE "Minneapolis Boundary" -- From MN Geocommons - https://gisdata.mn.g
     "CTU_CODE" text, -- City/Township Code
     geometry geometry -- Polygon
 );
+
+
+-- Don't need AADT/intersections
+
+--CREATE TABLE "MNDOT Current AADT Segments" -- Create table to store information on Current AADT segments - https://gisdata.mn.gov/dataset/trans-aadt-traffic-segments
+--( 
+--    "SEQUENCE_NUMBER" int, -- Unique identifier
+--    "ROUTE_LABEL" text,
+--    "STREET_NAME" text,
+--    "DAILY_FACTOR" text,
+--    "SEASONAL_FACTOR" text,
+--    "AXLE_FACTOR" text,
+--    "CURRENT_YEAR" int,
+--    "CURRENT_VOLUME" int,
+--    geometry geometry
+--);
+
+
+-- For relating the location to users
+--CREATE TABLE "Road Intersections" -- Create table to store road intersections in minneapolis
+--(
+--    intersection_index serial, -- Unique identifier
+--    "NS_cross_street" text, 
+--    "EW_cross_street" text,
+----	nearby_sensors int [], -- nearby sensors as an array of integers
+--    geometry geometry
+--);

@@ -3,7 +3,7 @@
 ## Load modules
 
 from psycopg2 import sql
-from App.modules import Basic_PSQL as psql
+import Basic_PSQL as psql
 import pandas as pd
 import pytz
 import datetime as dt
