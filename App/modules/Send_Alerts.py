@@ -19,8 +19,8 @@ import pandas as pd
 
 # Our functions
 
-import Twilio_Functions as our_twilio 
-import REDCap_Functions as redcap
+from App.modules import Twilio_Functions as our_twilio 
+from App.modules import REDCap_Functions as redcap
   
 # ~~~~~~~~~~~~~~ 
    
