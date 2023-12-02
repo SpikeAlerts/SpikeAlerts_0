@@ -57,10 +57,6 @@ purpleAir_api = os.getenv('PURPLEAIR_API_TOKEN') # PurpleAir API Read Key
 redCap_token_signUp = os.getenv('REDCAP_TOKEN_SIGNUP') # Survey Token
 redCap_token_report = os.getenv('REDCAP_TOKEN_REPORT') # Report Token
 
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID') # Twilio Information
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-TWILIO_NUMBER = os.getenv('TWILIO_NUMBER')
-
 # Database credentials
 
 from App.modules.db_conn import pg_connection_dict
@@ -192,7 +188,6 @@ def main_loop():
         
             Send_Alerts.send_all_messages(record_ids_to_text, messages,
                               redCap_token_signUp,
-                              TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER,
                               pg_connection_dict) # in Send_Alerts.py & .ipynb
             
             # Save them locally - for developers
@@ -219,6 +214,6 @@ def main_loop():
 
     # Terminate Program
 
-    # our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'], TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER)
+    # our_twilio.send_texts([os.environ['LOCAL_PHONE']], ['Terminating Program'])
 
     print("Terminating Program")

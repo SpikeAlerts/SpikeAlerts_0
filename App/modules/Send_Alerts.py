@@ -8,7 +8,7 @@ from dotenv import load_dotenv # Loading .env info
 
 # Database 
 
-from App.modules import Basic_PSQL as psql
+import Basic_PSQL as psql
 import psycopg2
 from psycopg2 import sql
 
@@ -19,214 +19,12 @@ import pandas as pd
 
 # Our functions
 
-from App.modules import Twilio_Functions as our_twilio 
-from App.modules import REDCap_Functions as redcap
-
-load_dotenv()
-
-from App.modules.db_conn import pg_connection_dict
-
-# creds = [os.getenv('DB_NAME'),
-#          os.getenv('DB_USER'),
-#          os.getenv('DB_PASS'),
-#          os.getenv('DB_PORT'),
-#          os.getenv('DB_HOST'),
-#          os.getenv('DB_OPTIONS')
-#         ]
-# pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host','options'], creds)) 
-
-# Functions 
-
-def Users_nearby_sensor(pg_connection_dict, sensor_index, distance):
-    '''
-    This function will return a list of record_ids from "Sign Up Information" that are within the distance from the sensor
-    
-    sensor_index = integer
-    distance = integer (in meters)
-    
-    returns record_ids (a list)
-    '''
-    
-    conn = psycopg2.connect(**pg_connection_dict)
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''
-    WITH sensor as -- query for the desired sensor
-    (
-    SELECT sensor_index, geometry
-    FROM "PurpleAir Stations"
-    WHERE sensor_index = {}
-    )
-    SELECT record_id
-    FROM "Sign Up Information" u, sensor s
-    WHERE u.subscribed = TRUE AND ST_DWithin(ST_Transform(u.geometry,26915), -- query for users within the distance from the sensor
-										    ST_Transform(s.geometry, 26915),{}); 
-    ''').format(sql.Literal(sensor_index),
-                sql.Literal(distance))
-
-    cur.execute(cmd)
-
-    conn.commit()
-
-    record_ids = [i[0] for i in cur.fetchall()] # Unpack results into list
-
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close() 
-
-    return record_ids
-
-# ~~~~~~~~~~~~~~
-
-def Users_to_message_new_alert(pg_connection_dict, record_ids):
-    '''
-    This function will return a list of record_ids from "Sign Up Information" that have empty active and cached alerts and are in the list or record_ids given
-    
-    record_ids = a list of ids to check
-    
-    returns record_ids_to_text (a list)
-    '''
-    
-    conn = psycopg2.connect(**pg_connection_dict)
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''
-    SELECT record_id
-    FROM "Sign Up Information"
-    WHERE active_alerts = {} AND cached_alerts = {} AND record_id = ANY ( {} );
-    ''').format(sql.Literal('{}'), sql.Literal('{}'), sql.Literal(record_ids))
-
-    cur.execute(cmd)
-
-    conn.commit()
-
-    record_ids_to_text = [i[0] for i in cur.fetchall()]
-
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close() 
-
-    return record_ids_to_text
-    
-# ~~~~~~~~~~~~~~
-
-def Users_to_message_end_alert(pg_connection_dict, ended_alert_indices):
-    '''
-    This function will return a list of record_ids from "Sign Up Information" that are subscribed, have empty active_alerts, non-empty cached_alerts, and cached_alerts intersect ended_alert_indices = empty (giving a 10 minute buffer before ending alerts - this can certainly change!)
-    
-    ended_alert_indices = a list of alert_ids that just ended
-    
-    returns record_ids_to_text (a list)
-    '''
-    
-    conn = psycopg2.connect(**pg_connection_dict)
-    cur = conn.cursor()
-
-    cmd = sql.SQL('''
-    SELECT record_id
-    FROM "Sign Up Information"
-    WHERE subscribed = TRUE
-        AND active_alerts = {}
-    	AND ARRAY_LENGTH(cached_alerts, 1) > 0 
-    	AND NOT cached_alerts && {}::bigint[];
-    ''').format(sql.Literal('{}'),
-      sql.Literal(ended_alert_indices))
-
-    cur.execute(cmd)
-
-    conn.commit()
-
-    record_ids_to_text = [i[0] for i in cur.fetchall()]
-
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close() 
-
-    return record_ids_to_text
-    
-# ~~~~~~~~~~~~~~ 
-def initialize_report(record_id, reports_for_day, pg_connection_dict):
-    '''
-    This function will initialize a unique report for a user in the database.
-
-    It will also return the duration_minutes/max_reading/report_id of the report
-    '''
-    
-    # Create Report_id
-    
-    report_id = str(reports_for_day).zfill(5) + '-' + now.strftime('%m%d%y') # XXXXX-MMDDYY
-    
-    # Create Cursor for commands
-    conn = psycopg2.connect(**pg_connection_dict)
-    cur = conn.cursor()
-
-    # Use the record_id to query for the user's cached_alerts
-    # Then aggregate from those alerts the start_time, time_difference, max_reading, and nested sensor_indices
-    # Unnest the sensor indices into an array of unique sensor_indices
-    # Lastly, it will insert all the information into "Reports Archive"
-    
-    cmd = sql.SQL('''WITH alert_cache as
-(
-	SELECT cached_alerts
-	FROM "Sign Up Information"
-	WHERE record_id = {} --inserted record_id
-), alerts as
-(
-	SELECT MIN(p.start_time) as start_time,
-			CURRENT_TIMESTAMP AT TIME ZONE 'America/Chicago' 
-				- MIN(p.start_time) as time_diff,
-			MAX(p.max_reading) as max_reading, 
-			ARRAY_AGG(p.sensor_indices) as sensor_indices
-	FROM "Archived Alerts Acute PurpleAir" p, alert_cache c
-	WHERE p.alert_index = ANY (c.cached_alerts)
-), unnested_sensors as 
-(
-	SELECT ARRAY_AGG(DISTINCT x.v) as sensor_indices
-	FROM alerts cross JOIN LATERAL unnest(alerts.sensor_indices) as x(v)
-)
-INSERT INTO "Reports Archive"
-SELECT {}, -- Inserted report_id
-        a.start_time, -- start_time
-		(((DATE_PART('day', a.time_diff) * 24) + 
-    		DATE_PART('hour', a.time_diff)) * 60 + 
-		 	DATE_PART('minute', a.time_diff)) as duration_minutes,
-			a.max_reading, -- max_reading
-		n.sensor_indices,
-		c.cached_alerts
-FROM alert_cache c, alerts a, unnested_sensors n;
-''').format(sql.Literal(record_id),
-            sql.Literal(report_id))
-
-    cur.execute(cmd)
-    # Commit command
-    conn.commit()
-
-    # Now get the information from that report
-
-    cmd = sql.SQL('''SELECT duration_minutes, max_reading
-             FROM "Reports Archive"
-             WHERE report_id = {};
-''').format(sql.Literal(report_id))
-
-    cur.execute(cmd)
-    # Commit command
-    conn.commit()
-
-    # Unpack response
-    duration_minutes, max_reading = cur.fetchall()[0]
-    # Close cursor
-    cur.close()
-    # Close connection
-    conn.close()
-
-    return duration_minutes, max_reading, report_id
+import Twilio_Functions as our_twilio 
+import REDCap_Functions as redcap
   
 # ~~~~~~~~~~~~~~ 
    
-def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER, pg_connection_dict):
+def send_all_messages(record_ids, messages, redCap_token_signUp, pg_connection_dict):
     '''
     This function will
     1. Send each message to the corresponding record_id
@@ -242,7 +40,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     
     # Check Unsubscriptions
     
-    unsubscribed_indices = our_twilio.check_unsubscriptions(numbers, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) # See twilio_functions.py
+    unsubscribed_indices = our_twilio.check_unsubscriptions(numbers) # See twilio_functions.py
     
     if len(unsubscribed_indices) > 0:
     
@@ -251,7 +49,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
         # Delete Twilio Information - see twilio_functions.py
         numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
-        our_twilio.delete_twilio_info(numbers_to_unsubscribe, account_sid, auth_token)
+        our_twilio.delete_twilio_info(numbers_to_unsubscribe)
         
         # pop() unsubscriptions from numbers/record_ids/messages list
         
@@ -263,7 +61,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         
     # Send messages
     
-    times = our_twilio.send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
+    times = our_twilio.send_texts(numbers, messages) # See twilio_functions.py
     
     update_user_table(record_ids, times, pg_connection_dict) # See Send_Alerts.py
 
