@@ -5,21 +5,25 @@ Drivers will be communicate_alert_start and communicate_alert_end
 
 import os
 from twilio.rest import Client
+
 # Getting .env information
 from dotenv import load_dotenv
 import time # Sleeping
 import pytz # Timezones
 import numpy as np
 
-load_dotenv()
-
-account_sid = os.environ['TWILIO_ACCOUNT_SID']
-auth_token = os.environ['TWILIO_AUTH_TOKEN']
-
-def send_texts(numbers, messages, account_sid, auth_token, twilio_number): # could refactor to send to user, that way we could inc. messages_sent in this function (better than havign to do it in parents)
+def send_texts(numbers, messages): # could refactor to send to user, that way we could inc. messages_sent in this function (better than havign to do it in parents)
     '''basic send function that takes in a list of numbers + list of messages and sends them out
     and returns a list of times that each message was sent
     '''
+
+    load_dotenv()
+
+    account_sid = os.environ['TWILIO_ACCOUNT_SID']
+    auth_token = os.environ['TWILIO_AUTH_TOKEN']
+    twilio_number = os.environ['TWILIO_NUMBER']
+    messaging_service_sid = os.environ['TWILIO_SERVICE_SID']
+    
     client = Client(account_sid, auth_token)
 
     times = []
@@ -27,6 +31,7 @@ def send_texts(numbers, messages, account_sid, auth_token, twilio_number): # cou
 
         msg = client.messages.create(
         body= message,
+        messaging_service_sid=messaging_service_sid,
         from_=twilio_number,
         to=number # replace with number in PROD
         ) # should check error handling, if needed based on SDK
@@ -37,11 +42,15 @@ def send_texts(numbers, messages, account_sid, auth_token, twilio_number): # cou
         
     return times
     
-def check_unsubscriptions(numbers, account_sid, auth_token):
+def check_unsubscriptions(numbers):
     '''Returns the indices of the phone numbers in numbers that have unsubscribed
     Which corresponds to record_ids_to_text'''
 
+    load_dotenv()
 
+    account_sid = os.environ['TWILIO_ACCOUNT_SID']
+    auth_token = os.environ['TWILIO_AUTH_TOKEN']
+    
     unsubscribed_indices = []
     
     stop_key_words = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'] # see https://support.twilio.com/hc/en-us/articles/223134027-Twilio-support-for-opt-out-keywords-SMS-STOP-filtering-
@@ -68,10 +77,14 @@ def check_unsubscriptions(numbers, account_sid, auth_token):
 
     return unsubscribed_indices
     
-def delete_twilio_info(numbers, account_sid, auth_token):
+def delete_twilio_info(numbers):
     '''This function deletes texts to/from phone numbers in twilio
     '''
+    
+    load_dotenv()
 
+    account_sid = os.environ['TWILIO_ACCOUNT_SID']
+    auth_token = os.environ['TWILIO_AUTH_TOKEN']
     # Set up Twilio Client
 
     client = Client(account_sid, auth_token)

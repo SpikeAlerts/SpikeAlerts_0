@@ -21,21 +21,10 @@ import pandas as pd
 
 import Twilio_Functions as our_twilio 
 import REDCap_Functions as redcap
-
-load_dotenv()
-
-creds = [os.getenv('DB_NAME'),
-         os.getenv('DB_USER'),
-         os.getenv('DB_PASS'),
-         os.getenv('DB_PORT'),
-         os.getenv('DB_HOST')
-        ]
-
-pg_connection_dict = dict(zip(['dbname', 'user', 'password', 'port', 'host'], creds)) 
   
 # ~~~~~~~~~~~~~~ 
    
-def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER, pg_connection_dict):
+def send_all_messages(record_ids, messages, redCap_token_signUp, pg_connection_dict):
     '''
     This function will
     1. Send each message to the corresponding record_id
@@ -51,7 +40,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
     
     # Check Unsubscriptions
     
-    unsubscribed_indices = our_twilio.check_unsubscriptions(numbers, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) # See twilio_functions.py
+    unsubscribed_indices = our_twilio.check_unsubscriptions(numbers) # See twilio_functions.py
     
     if len(unsubscribed_indices) > 0:
     
@@ -60,7 +49,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         Unsubscribe_users(record_ids_to_unsubscribe, pg_connection_dict)
         # Delete Twilio Information - see twilio_functions.py
         numbers_to_unsubscribe = list(np.array(numbers)[unsubscribed_indices])
-        our_twilio.delete_twilio_info(numbers_to_unsubscribe, account_sid, auth_token)
+        our_twilio.delete_twilio_info(numbers_to_unsubscribe)
         
         # pop() unsubscriptions from numbers/record_ids/messages list
         
@@ -72,7 +61,7 @@ def send_all_messages(record_ids, messages, redCap_token_signUp, TWILIO_ACCOUNT_
         
     # Send messages
     
-    times = our_twilio.send_texts(numbers, messages, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_NUMBER) # See twilio_functions.py
+    times = our_twilio.send_texts(numbers, messages) # See twilio_functions.py
     
     update_user_table(record_ids, times, pg_connection_dict) # See Send_Alerts.py
 
