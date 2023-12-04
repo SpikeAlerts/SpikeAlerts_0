@@ -24,14 +24,6 @@ The program queries the PurpleAir API and searches for spikes above a threshold 
 
 When all alerts end for a user, an end of spike alert message is sent to the subscriber, detailing the length and severity of the event, and a unique reporting option through REDCap. Sensor information is also archived for future reference (this does not include the user's location/phone number).
 
-## Functionality  
-
-Users who want to receive spike alerts can fill out our survey and have their phone number and location of interest stored in a secure [REDCap](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5764586/) database hosted by the University of Minnesota. It’s likely most users will enter their home, although schools, work, a favorite park, or any other location would make sense. If anyone wants multiple locations, please fill out the survey twice.
-
-The program queries the PurpleAir API and searches for spikes above a threshold ([35 micrograms/meter^3](https://www.epa.gov/pm-pollution/national-ambient-air-quality-standards-naaqs-pm) is the current EPA Standard). The value is a variable that can easily be changed/adjusted. When the system detects a spike, it sends a text to all subscribers within a certain distance of the monitor if they don't already have an active alert. The text links to the sensor on the PurpleAir Webmap.
-
-When all alerts end for a user, an end of spike alert message is sent to the subscriber, detailing the length and severity of the event, and a unique reporting option through REDCap. This information is also archived for future reference.
-
 ## Installation Instructions
 
  For development or personal use
